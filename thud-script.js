@@ -180,12 +180,17 @@ function render(){
       el.innerHTML = "";
       const p = state.board[r][c];
       if (p && p.type) el.appendChild(pieceEl(p));
+
+      const canDrag = !state.over && state.phase === "normal" &&
+        p && p.type !== "thudstone" && p.owner === state.turn;
+      if (canDrag) el.classList.add("draggable");
     }
   }
 }
 
 /* ---------- PREPARACIÓN ---------- */
 function setupBoard(){
+  cancelMoveAnimation();
   state.board = [];
   for (let r = 0; r < N; r++){
     state.board[r] = [];
@@ -325,8 +330,17 @@ function adjacentDwarfs(r, c){
 }
 
 /* ---------- INTERACCIÓN ---------- */
+function selectPiece(r, c){
+  state.selected = { r, c };
+  state.targets = state.turn === "dwarfs"
+    ? dwarfTargets(r, c)
+    : trollTargets(r, c);
+  render();
+  updateUI();
+}
+
 function onCellClick(r, c){
-  if (state.over) return;
+  if (state.over || animatingMove) return;
 
   // Fase de captura de los trolls: clic en enanos adyacentes para eliminarlos
   if (state.phase === "capture"){
@@ -353,12 +367,7 @@ function onCellClick(r, c){
 
   // Seleccionar una pieza propia
   if (piece && piece.type && piece.owner === state.turn){
-    state.selected = { r, c };
-    state.targets = state.turn === "dwarfs"
-      ? dwarfTargets(r, c)
-      : trollTargets(r, c);
-    render();
-    updateUI();
+    selectPiece(r, c);
     return;
   }
 
@@ -372,7 +381,252 @@ function clearSelection(){
   updateUI();
 }
 
-function executeTarget(tgt){
+/* ---------- ARRASTRAR PIEZAS ---------- */
+let drag = null;
+const DRAG_THRESHOLD = 6;
+
+function cellFromPoint(x, y){
+  const el = document.elementFromPoint(x, y);
+  return el && el.closest ? el.closest(".cell") : null;
+}
+
+function targetAt(x, y){
+  const cell = cellFromPoint(x, y);
+  if (!cell) return null;
+  const r = Number(cell.dataset.r);
+  const c = Number(cell.dataset.c);
+  return state.targets.find(t => t.r === r && t.c === c) || null;
+}
+
+function onPointerDown(e){
+  if (e.button !== 0 || e.pointerType === "touch") return;
+  if (state.over || animatingMove || state.phase !== "normal") return;
+
+  const cell = e.target.closest(".cell");
+  if (!cell) return;
+  const r = Number(cell.dataset.r);
+  const c = Number(cell.dataset.c);
+  const p = state.board[r][c];
+  if (!p || p.type === "thudstone" || p.owner !== state.turn) return;
+
+  drag = {
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    from: { r, c },
+    active: false,
+    ghost: null,
+    sourceEl: null,
+    hoverCell: null
+  };
+}
+
+function startDrag(e){
+  drag.active = true;
+  document.body.classList.add("dragging");
+  selectPiece(drag.from.r, drag.from.c);
+
+  const sourceCell = cells.get(key(drag.from.r, drag.from.c));
+  const sourceEl = sourceCell ? sourceCell.querySelector(".piece") : null;
+  const rect = sourceEl ? sourceEl.getBoundingClientRect() : null;
+
+  const ghost = pieceEl(state.board[drag.from.r][drag.from.c]);
+  ghost.classList.add("drag-ghost");
+  if (rect){
+    ghost.style.width = rect.width + "px";
+    ghost.style.height = rect.height + "px";
+  }
+  if (sourceEl){
+    ghost.style.fontSize = getComputedStyle(sourceEl).fontSize;
+    sourceEl.classList.add("drag-origin");
+  }
+
+  document.body.appendChild(ghost);
+  drag.ghost = ghost;
+  drag.sourceEl = sourceEl;
+  moveGhost(e);
+}
+
+function moveGhost(e){
+  drag.ghost.style.left = e.clientX + "px";
+  drag.ghost.style.top = e.clientY + "px";
+}
+
+function updateDragHover(e){
+  const cell = cellFromPoint(e.clientX, e.clientY);
+  if (drag.hoverCell && drag.hoverCell !== cell){
+    drag.hoverCell.classList.remove("drop-hover");
+  }
+  drag.hoverCell = null;
+  if (!cell) return;
+
+  const r = Number(cell.dataset.r);
+  const c = Number(cell.dataset.c);
+  if (state.targets.some(t => t.r === r && t.c === c)){
+    cell.classList.add("drop-hover");
+    drag.hoverCell = cell;
+  }
+}
+
+function onPointerMove(e){
+  if (!drag || e.pointerId !== drag.pointerId) return;
+
+  if (!drag.active){
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
+    startDrag(e);
+  }
+
+  e.preventDefault();
+  moveGhost(e);
+  updateDragHover(e);
+}
+
+function cleanupDrag(){
+  if (!drag) return;
+  if (drag.ghost) drag.ghost.remove();
+  if (drag.hoverCell) drag.hoverCell.classList.remove("drop-hover");
+  if (drag.sourceEl) drag.sourceEl.classList.remove("drag-origin");
+  document.body.classList.remove("dragging");
+  drag = null;
+}
+
+function suppressNextClick(sourceCell, dropCell){
+  const handler = ev => {
+    const clickedCell = ev.target.closest ? ev.target.closest(".cell") : null;
+
+    // Un clic real en otra casilla (por ejemplo, una captura) debe funcionar.
+    if (clickedCell && clickedCell !== sourceCell && clickedCell !== dropCell){
+      remove();
+      return;
+    }
+
+    ev.stopPropagation();
+    ev.preventDefault();
+    remove();
+  };
+  const remove = () => document.removeEventListener("click", handler, true);
+
+  document.addEventListener("click", handler, true);
+  setTimeout(remove, 250);
+}
+
+function onPointerUp(e){
+  if (!drag || e.pointerId !== drag.pointerId) return;
+
+  const active = drag.active;
+  const target = active ? targetAt(e.clientX, e.clientY) : null;
+  const sourceCell = drag.sourceEl ? drag.sourceEl.closest(".cell") : null;
+  const dropCell = active ? cellFromPoint(e.clientX, e.clientY) : null;
+
+  cleanupDrag();
+  if (!active) return;
+
+  suppressNextClick(sourceCell, dropCell);
+  if (target) executeTarget(target, false);
+  else render();
+}
+
+function cancelDrag(){
+  if (!drag) return;
+  const active = drag.active;
+  cleanupDrag();
+  if (active) render();
+}
+
+function onPointerCancel(e){
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  cancelDrag();
+}
+
+let moveAnimation = null;
+let animatingMove = false;
+
+function cancelMoveAnimation(){
+  if (!moveAnimation) return;
+  const { ghost, sourceEl, animation } = moveAnimation;
+  if (animation){
+    try { animation.cancel(); } catch (err) { /* ya terminó */ }
+  }
+  ghost.remove();
+  if (sourceEl) sourceEl.classList.remove("move-origin");
+  moveAnimation = null;
+  animatingMove = false;
+}
+
+function executeTarget(tgt, animate = true){
+  if (animate && animateMove(tgt)) return;
+  applyTarget(tgt);
+}
+
+function animateMove(tgt){
+  if (animatingMove) return true;
+
+  // En el lanzamiento vuela el enano frontal; en el resto, la pieza seleccionada.
+  const from = (state.turn === "dwarfs" && tgt.kind === "lanzar")
+    ? tgt.from
+    : state.selected;
+  if (!from) return false;
+
+  const piece = state.board[from.r][from.c];
+  if (!piece || piece.type === "thudstone") return false;
+
+  const sourceCell = cells.get(key(from.r, from.c));
+  const targetCell = cells.get(key(tgt.r, tgt.c));
+  const sourceEl = sourceCell ? sourceCell.querySelector(".piece") : null;
+  if (!sourceCell || !targetCell || !sourceEl) return false;
+
+  const sourceRect = sourceEl.getBoundingClientRect();
+  const targetRect = targetCell.getBoundingClientRect();
+  const sourceX = sourceRect.left + sourceRect.width / 2;
+  const sourceY = sourceRect.top + sourceRect.height / 2;
+  const targetX = targetRect.left + targetRect.width / 2;
+  const targetY = targetRect.top + targetRect.height / 2;
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+  const distance = Math.hypot(dx, dy);
+  const lift = Math.min(40, 22 + distance * 0.1);
+
+  const ghost = pieceEl(piece);
+  ghost.classList.add("move-ghost");
+  ghost.style.width = sourceRect.width + "px";
+  ghost.style.height = sourceRect.height + "px";
+  ghost.style.fontSize = getComputedStyle(sourceEl).fontSize;
+  ghost.style.left = sourceX + "px";
+  ghost.style.top = sourceY + "px";
+  document.body.appendChild(ghost);
+
+  sourceEl.classList.add("move-origin");
+  animatingMove = true;
+
+  const animation = ghost.animate([
+    { transform: "translate(-50%, -50%) scale(1) rotate(0deg)" },
+    {
+      transform: "translate(calc(-50% + " + (dx * 0.52) + "px), calc(-50% + " + (dy * 0.52 - lift) + "px)) scale(1.22) rotate(-4deg)",
+      offset: 0.55
+    },
+    { transform: "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(1) rotate(0deg)" }
+  ], {
+    duration: Math.min(560, 340 + distance * 1.2),
+    easing: "cubic-bezier(.22,.75,.28,1)"
+  });
+
+  moveAnimation = { ghost, sourceEl, animation };
+
+  animation.finished.then(() => {
+    if (!moveAnimation || moveAnimation.animation !== animation) return;
+    ghost.remove();
+    sourceEl.classList.remove("move-origin");
+    moveAnimation = null;
+    animatingMove = false;
+    applyTarget(tgt);
+  }).catch(() => { /* animación cancelada */ });
+
+  return true;
+}
+
+function applyTarget(tgt){
   const from = state.selected;
 
   if (state.turn === "dwarfs"){
@@ -697,14 +951,14 @@ document.getElementById("langBtn").addEventListener("click", () => {
 });
 
 document.getElementById("endTurnBtn").addEventListener("click", () => {
-  if (state.over) return;
+  if (state.over || animatingMove) return;
   if (state.phase !== "capture") return;
   if (state.mustCapture && state.captured === 0) return;
   endTurn();
 });
 
 document.getElementById("finalizeBtn").addEventListener("click", async () => {
-  if (state.over) return;
+  if (state.over || animatingMove) return;
   const ok = await askConfirm(
     t("confirm.finalize.title"),
     t("confirm.finalize.text"),
@@ -715,6 +969,7 @@ document.getElementById("finalizeBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("newBattleBtn").addEventListener("click", async () => {
+  if (animatingMove) return;
   if (!state.over){
     const ok = await askConfirm(
       t("confirm.new.title"),
@@ -729,6 +984,11 @@ document.getElementById("newBattleBtn").addEventListener("click", async () => {
 /* ---------- ARRANQUE ---------- */
 async function init(){
   buildGrid();
+  boardEl.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove, { passive: false });
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerCancel);
+  window.addEventListener("blur", cancelDrag);
   try {
     await loadLocale(preferredLanguage());
   } catch (err) {
