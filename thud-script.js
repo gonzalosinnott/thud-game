@@ -1,5 +1,91 @@
 "use strict";
 
+/* ---------- INTERNACIONALIZACIÓN ---------- */
+const LOCALES = ["es", "en"];
+let currentLang = "es";
+let messages = {};
+
+function parseProperties(text){
+  const out = {};
+  for (const rawLine of text.split(/\r?\n/)){
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#") || line.startsWith("!")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    value = value.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+    out[key] = value;
+  }
+  return out;
+}
+
+async function loadLocale(lang){
+  const res = await fetch("resources/i18n/" + lang + ".properties", { cache: "no-store" });
+  if (!res.ok) throw new Error("No se pudo cargar " + lang + ".properties (HTTP " + res.status + ")");
+  messages = parseProperties(await res.text());
+  currentLang = lang;
+}
+
+function t(key, params){
+  let text = Object.prototype.hasOwnProperty.call(messages, key) ? messages[key] : key;
+  if (params){
+    text = text.replace(/\{(\w+)\}/g, (match, name) =>
+      Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+    );
+  }
+  return text;
+}
+
+function applyTranslations(){
+  document.documentElement.lang = currentLang;
+  document.title = t("app.title");
+
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => {
+    el.setAttribute("aria-label", t(el.dataset.i18nAria));
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => {
+    el.setAttribute("title", t(el.dataset.i18nTitle));
+  });
+
+  const langBtn = document.getElementById("langBtn");
+  langBtn.textContent = currentLang.toUpperCase();
+  langBtn.setAttribute("aria-label", t("lang.switch"));
+  langBtn.setAttribute("title", t("lang.switch"));
+}
+
+function preferredLanguage(){
+  try {
+    const saved = localStorage.getItem("thud.lang");
+    if (LOCALES.includes(saved)) return saved;
+  } catch (err) { /* localStorage puede no estar disponible */ }
+  return "es";
+}
+
+async function switchLanguage(lang){
+  if (lang === currentLang) return;
+  const btn = document.getElementById("langBtn");
+  btn.disabled = true;
+  try {
+    await loadLocale(lang);
+    try { localStorage.setItem("thud.lang", lang); } catch (err) { /* sin persistencia */ }
+    applyTranslations();
+    updateUI();
+    renderLog();
+    if (state.over) renderResult(countType("dwarf"), countType("troll"));
+  } catch (err) {
+    console.error("No se pudo cambiar el idioma:", err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 const N = 15;
 const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
 
@@ -141,7 +227,7 @@ function setupBoard(){
   state.log = [];
   document.getElementById("result").hidden = true;
 
-  log("Comienza la batalla. Los enanos mueven primero.");
+  log("log.battleStart");
   render();
   updateUI();
 }
@@ -160,7 +246,7 @@ function dwarfTargets(r, c){
     }
   }
 
-  // Hurl: línea de enanos adyacentes; se lanza el enano frontal.
+  // Lanzar: línea de enanos adyacentes; se lanza el enano frontal.
   // Distancia máxima = número de enanos de la línea (L).
   for (const [dr, dc] of DIRS){
     let fd = 0;
@@ -183,7 +269,7 @@ function dwarfTargets(r, c){
       const cell = state.board[rr][cc];
       if (!cell.type) continue;                  // casilla vacía: sigue volando
       if (cell.type === "troll"){
-        out.push({ r:rr, c:cc, kind:"hurl", from:{ r:lr, c:lc }, line });
+        out.push({ r:rr, c:cc, kind:"lanzar", from:{ r:lr, c:lc }, line });
       }
       break;                                     // cualquier otra pieza bloquea
     }
@@ -202,7 +288,7 @@ function trollTargets(r, c){
     }
   }
 
-  // Shove: línea de trolls por detrás; el troll del extremo avanza hasta L casillas
+  // Empujar: línea de trolls por detrás; el troll del extremo avanza hasta L casillas
   const moveKeys = new Set(out.map(t => key(t.r, t.c)));
   for (const [dr, dc] of DIRS){
     let b = 0;
@@ -220,7 +306,7 @@ function trollTargets(r, c){
       if (moveKeys.has(key(rr, cc))) continue;   // ya ofrecido como movimiento normal
       const caps = adjacentDwarfs(rr, cc);
       if (caps.length){
-        out.push({ r:rr, c:cc, kind:"shove", caps, line });
+        out.push({ r:rr, c:cc, kind:"empujar", caps, line });
       }
     }
   }
@@ -292,15 +378,15 @@ function executeTarget(tgt){
   if (state.turn === "dwarfs"){
     if (tgt.kind === "move"){
       movePiece(from, tgt);
-      log("Enano " + coord(from) + " \u2192 " + coord(tgt) + ".");
+      log("log.dwarfMove", { from: coord(from), to: coord(tgt) });
       endTurn();
     } else {
-      // Hurl: el enano frontal vuela, el troll desaparece y el enano ocupa su casilla
+      // Lanzar: el enano frontal vuela, el troll desaparece y el enano ocupa su casilla
       const lead = tgt.from;
       state.board[tgt.r][tgt.c] = empty();
       state.board[lead.r][lead.c] = empty();
       state.board[tgt.r][tgt.c] = { type:"dwarf", owner:"dwarfs" };
-      log("Hurl: enano de " + coord(lead) + " captura un troll en " + coord(tgt) + ".", true);
+      log("log.hurl", { from: coord(lead), to: coord(tgt) }, true);
       endTurn();
     }
     return;
@@ -308,11 +394,11 @@ function executeTarget(tgt){
 
   if (tgt.kind === "move"){
     movePiece(from, tgt);
-    log("Troll " + coord(from) + " \u2192 " + coord(tgt) + ".");
+    log("log.trollMove", { from: coord(from), to: coord(tgt) });
     startCapture(false, tgt);
   } else {
     movePiece(from, tgt);
-    log("Shove: trolls empujan, troll de " + coord(from) + " \u2192 " + coord(tgt) + ".", true);
+    log("log.shove", { from: coord(from), to: coord(tgt) }, true);
     startCapture(true, tgt);
   }
 }
@@ -343,7 +429,7 @@ function doCapture(r, c){
   state.board[r][c] = empty();
   state.captureCells = state.captureCells.filter(p => !(p.r === r && p.c === c));
   state.captured++;
-  log("Troll captura un enano en " + coord({ r, c }) + ".");
+  log("log.capture", { cell: coord({ r, c }) });
 
   if (state.captureCells.length === 0){
     endTurn();                     // no quedan capturas posibles
@@ -368,7 +454,7 @@ function endTurn(){
 
   if (checkBattleOver()) return;
 
-  log("Turno de los " + (state.turn === "dwarfs" ? "enanos." : "trolls."));
+  log(state.turn === "dwarfs" ? "log.turnDwarfs" : "log.turnTrolls");
   updateUI();
 }
 
@@ -405,31 +491,51 @@ function checkBattleOver(){
   return false;
 }
 
-function finishBattle(dwarfs, trolls){
-  state.over = true;
+function resultVerdict(dwarfPts, trollPts){
+  const diff = trollPts - dwarfPts;
+  if (diff > 0){
+    return t(diff === 1 ? "result.trollLead.one" : "result.trollLead.other", { diff });
+  }
+  if (diff < 0){
+    return t(diff === -1 ? "result.dwarfLead.one" : "result.dwarfLead.other", { diff: -diff });
+  }
+  return t("result.draw");
+}
+
+function renderResult(dwarfs, trolls, verdict){
   const dwarfPts = dwarfs;          // 1 punto por enano vivo
   const trollPts = trolls * 4;      // 4 puntos por troll vivo
+  const finalVerdict = verdict || resultVerdict(dwarfPts, trollPts);
+  const result = document.getElementById("result");
+  result.hidden = false;
+  result.innerHTML = t("result.battle", {
+    dwarfs,
+    dwarfPts,
+    trolls,
+    trollPts,
+    verdict: finalVerdict
+  });
+}
+
+function finishBattle(dwarfs, trolls){
+  state.over = true;
+  const dwarfPts = dwarfs;
+  const trollPts = trolls * 4;
 
   state.totals.dwarfs += dwarfPts;
   state.totals.trolls += trollPts;
   state.battles++;
 
-  const diff = trollPts - dwarfPts;
-  let verdict;
-  if (diff > 0) verdict = "Ventaja de los trolls por " + diff + (diff === 1 ? " punto." : " puntos.");
-  else if (diff < 0) verdict = "Ventaja de los enanos por " + (-diff) + (diff === -1 ? " punto." : " puntos.");
-  else verdict = "Empate.";
+  const verdict = resultVerdict(dwarfPts, trollPts);
 
-  log("Fin de la batalla \u2014 enanos: " + dwarfPts + " pts (" + dwarfs +
-      "), trolls: " + trollPts + " pts (" + trolls + "). " + verdict, true);
+  log("log.battleEnd", {
+    dwarfPts,
+    dwarfs,
+    trollPts,
+    trolls
+  }, true);
 
-  const result = document.getElementById("result");
-  result.hidden = false;
-  result.innerHTML =
-    "<strong>Fin de la batalla</strong><br>" +
-    "Enanos: " + dwarfs + " piezas vivas \u2192 " + dwarfPts + " pts<br>" +
-    "Trolls: " + trolls + " piezas vivas \u2192 " + trollPts + " pts<br>" +
-    "<strong>" + verdict + "</strong>";
+  renderResult(dwarfs, trolls, verdict);
 
   render();
   updateUI();
@@ -446,32 +552,30 @@ function updateUI(){
   document.getElementById("trollPts").textContent = trolls * 4;
 
   const turnEl = document.getElementById("turn");
-  turnEl.textContent = state.turn === "dwarfs" ? "Turno de los Enanos" : "Turno de los Trolls";
+  document.getElementById("turnLabel").textContent = state.turn === "dwarfs" ? t("turn.dwarfs") : t("turn.trolls");
   turnEl.className = "turn " + (state.turn === "dwarfs" ? "dwarfs" : "trolls");
 
   const statusEl = document.getElementById("status");
   if (state.over){
-    statusEl.textContent = "La batalla ha terminado. Pulsa \u00abNueva batalla\u00bb para jugar otra.";
+    statusEl.textContent = t("status.over");
   } else if (state.phase === "capture"){
-    statusEl.textContent = state.mustCapture
-      ? "Shove: debes capturar al menos un enano adyacente. Luego termina el turno."
-      : "Captura opcional: pulsa los enanos adyacentes que quieras eliminar.";
+    statusEl.textContent = (state.mustCapture && state.captured === 0)
+      ? t("status.shoveRequired")
+      : t("status.captureOptional");
   } else if (state.selected){
     const n = state.targets.length;
-    const hurls = state.targets.filter(t => t.kind === "hurl").length;
-    const shoves = state.targets.filter(t => t.kind === "shove").length;
+    const lanzamientos = state.targets.filter(target => target.kind === "lanzar").length;
+    const empujes = state.targets.filter(target => target.kind === "empujar").length;
     if (!n){
-      statusEl.textContent = "Esa pieza no tiene jugadas legales. Selecciona otra.";
+      statusEl.textContent = t("status.noMoves");
     } else {
-      let txt = n + (n === 1 ? " destino disponible." : " destinos disponibles.");
-      if (hurls) txt += " " + hurls + (hurls === 1 ? " hurl" : " hurls") + " posible" + (hurls === 1 ? "" : "s") + ".";
-      if (shoves) txt += " " + shoves + (shoves === 1 ? " shove" : " shoves") + " posible" + (shoves === 1 ? "" : "s") + ".";
+      let txt = t(n === 1 ? "status.targets.one" : "status.targets.other", { n });
+      if (lanzamientos) txt += " " + t(lanzamientos === 1 ? "status.hurls.one" : "status.hurls.other", { n: lanzamientos });
+      if (empujes) txt += " " + t(empujes === 1 ? "status.shoves.one" : "status.shoves.other", { n: empujes });
       statusEl.textContent = txt;
     }
   } else {
-    statusEl.textContent = state.turn === "dwarfs"
-      ? "Selecciona un enano para mover o lanzar (hurl)."
-      : "Selecciona un troll para mover o empujar (shove).";
+    statusEl.textContent = state.turn === "dwarfs" ? t("status.selectDwarf") : t("status.selectTroll");
   }
 
   const btn = document.getElementById("endTurnBtn");
@@ -479,25 +583,29 @@ function updateUI(){
   btn.hidden = !show;
   btn.disabled = state.mustCapture && state.captured === 0;
   btn.textContent = (state.mustCapture && state.captured === 0)
-    ? "Captura obligatoria"
-    : "Terminar turno";
+    ? t("btn.captureRequired")
+    : t("btn.endTurn");
+  turnEl.classList.toggle("has-action", show);
+  document.getElementById("turnLabel").hidden = show;
 
   document.getElementById("finalizeBtn").hidden = state.over;
 
   const totalsEl = document.getElementById("totals");
   if (state.battles > 0){
     totalsEl.hidden = false;
+    const title = state.battles === 1
+      ? t("totals.title.one")
+      : t("totals.title.other", { n: state.battles });
     totalsEl.innerHTML =
-      "<strong>Acumulado en " + state.battles +
-      (state.battles === 1 ? " batalla" : " batallas") + "</strong><br>" +
-      "Enanos: " + state.totals.dwarfs + " pts \u00b7 Trolls: " + state.totals.trolls + " pts";
+      "<strong>" + title + "</strong><br>" +
+      t("totals.line", { dwarfs: state.totals.dwarfs, trolls: state.totals.trolls });
   } else {
     totalsEl.hidden = true;
   }
 }
 
-function log(text, highlight){
-  state.log.push({ text, highlight: !!highlight });
+function log(key, params, highlight){
+  state.log.push({ key, params: params || null, highlight: !!highlight });
   if (state.log.length > 60) state.log.shift();
   renderLog();
 }
@@ -508,14 +616,86 @@ function renderLog(){
   const items = state.log.slice(-9);
   for (const entry of items){
     const li = document.createElement("li");
-    li.textContent = entry.text;
+    const params = Object.assign({}, entry.params);
+    if (entry.key === "log.battleEnd"){
+      params.verdict = resultVerdict(params.dwarfPts, params.trollPts);
+    }
+    li.textContent = t(entry.key, params);
     if (entry.highlight) li.className = "hl";
     ol.appendChild(li);
   }
   ol.scrollTop = ol.scrollHeight;
 }
 
+/* ---------- MODALES ---------- */
+const helpModal = document.getElementById("helpModal");
+const confirmModal = document.getElementById("confirmModal");
+const confirmTitleEl = document.getElementById("confirmTitle");
+const confirmTextEl = document.getElementById("confirmText");
+const confirmOkEl = document.getElementById("confirmOk");
+
+let activeModal = null;
+let lastFocused = null;
+let confirmResolver = null;
+
+function openModal(modal){
+  if (!modal || activeModal) return;
+  lastFocused = document.activeElement;
+  activeModal = modal;
+  modal.hidden = false;
+  document.body.classList.add("modal-open");
+  const focusable = modal.querySelector(".modal-close, .modal-actions .btn");
+  if (focusable) focusable.focus();
+}
+
+function closeModal(modal){
+  if (!modal || modal !== activeModal) return;
+  modal.hidden = true;
+  activeModal = null;
+  document.body.classList.remove("modal-open");
+  if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  lastFocused = null;
+}
+
+function askConfirm(title, text, okLabel){
+  confirmTitleEl.textContent = title;
+  confirmTextEl.textContent = text;
+  confirmOkEl.textContent = okLabel || "Confirmar";
+  openModal(confirmModal);
+  return new Promise(resolve => { confirmResolver = resolve; });
+}
+
+function settleConfirm(value){
+  if (!confirmResolver) return;
+  const resolve = confirmResolver;
+  confirmResolver = null;
+  closeModal(confirmModal);
+  resolve(value);
+}
+
+document.getElementById("helpBtn").addEventListener("click", () => openModal(helpModal));
+document.getElementById("confirmOk").addEventListener("click", () => settleConfirm(true));
+document.getElementById("confirmCancel").addEventListener("click", () => settleConfirm(false));
+
+document.querySelectorAll(".modal [data-close]").forEach(el => {
+  el.addEventListener("click", () => {
+    const modal = el.closest(".modal");
+    if (modal === confirmModal) settleConfirm(false);
+    else closeModal(modal);
+  });
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || !activeModal) return;
+  if (activeModal === confirmModal) settleConfirm(false);
+  else closeModal(activeModal);
+});
+
 /* ---------- BOTONES ---------- */
+document.getElementById("langBtn").addEventListener("click", () => {
+  switchLanguage(currentLang === "es" ? "en" : "es");
+});
+
 document.getElementById("endTurnBtn").addEventListener("click", () => {
   if (state.over) return;
   if (state.phase !== "capture") return;
@@ -523,17 +703,43 @@ document.getElementById("endTurnBtn").addEventListener("click", () => {
   endTurn();
 });
 
-document.getElementById("finalizeBtn").addEventListener("click", () => {
+document.getElementById("finalizeBtn").addEventListener("click", async () => {
   if (state.over) return;
-  if (!confirm("\u00bfFinalizar la batalla y contar los puntos?")) return;
+  const ok = await askConfirm(
+    t("confirm.finalize.title"),
+    t("confirm.finalize.text"),
+    t("btn.finalize")
+  );
+  if (!ok || state.over) return;
   finishBattle(countType("dwarf"), countType("troll"));
 });
 
-document.getElementById("newBattleBtn").addEventListener("click", () => {
-  if (!state.over && !confirm("\u00bfReiniciar la batalla actual?")) return;
+document.getElementById("newBattleBtn").addEventListener("click", async () => {
+  if (!state.over){
+    const ok = await askConfirm(
+      t("confirm.new.title"),
+      t("confirm.new.text"),
+      t("btn.restart")
+    );
+    if (!ok) return;
+  }
   setupBoard();
 });
 
 /* ---------- ARRANQUE ---------- */
-buildGrid();
-setupBoard();
+async function init(){
+  buildGrid();
+  try {
+    await loadLocale(preferredLanguage());
+  } catch (err) {
+    console.error("No se pudieron cargar las traducciones:", err);
+    document.getElementById("status").textContent =
+      "No se pudieron cargar las traducciones. Abrí la página desde un servidor HTTP o desde GitHub Pages. / " +
+      "Could not load translations. Open the page from an HTTP server or GitHub Pages.";
+    return;
+  }
+  applyTranslations();
+  setupBoard();
+}
+
+init();

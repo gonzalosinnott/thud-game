@@ -9,69 +9,104 @@
 <body>
 <header class="head">
   <h1>THUD!</h1>
+  <div class="head-actions">
+    <button type="button" id="langBtn" class="lang-btn" aria-label="Cambiar idioma" title="Cambiar idioma">ES</button>
+    <button type="button" id="helpBtn" class="help-btn" data-i18n-aria="help.open" data-i18n-title="help.open" aria-label="Cómo se juega" title="Cómo se juega">?</button>
+  </div>
 </header>
 
 <main class="layout">
   <section class="board-wrap">
-    <div class="board" id="board" aria-label="Tablero de Thud"></div>
+    <div class="board" id="board" aria-label="Tablero de Thud" data-i18n-aria="board.aria"></div>
   </section>
 
   <aside class="panel">
-    <div class="turn dwarfs" id="turn">Turno de los Enanos</div>
+    <div class="actions">
+      <button id="finalizeBtn" class="btn finalize" data-i18n="btn.finalize">Finalizar batalla</button>
+      <button id="newBattleBtn" class="btn new-battle" data-i18n="btn.newBattle">Nueva batalla</button>
+    </div>
+
+    <div class="turn dwarfs" id="turn">
+      <span id="turnLabel">Turno de los Enanos</span>
+      <button id="endTurnBtn" class="btn end-turn" data-i18n="btn.endTurn" hidden>Terminar turno</button>
+    </div>
 
     <div class="scores">
       <div class="score-card dwarfs">
-        <div class="side">Enanos</div>
-        <div class="count"><span id="dwarfCount">32</span> <span class="unit">enanos</span></div>
-        <div class="points"><span id="dwarfPts">32</span> pts</div>
+        <div class="side" data-i18n="side.dwarfs">Enanos</div>
+        <div class="count"><span id="dwarfCount">32</span> <span class="unit" data-i18n="unit.dwarfs">enanos</span></div>
+        <div class="points"><span id="dwarfPts">32</span> <span data-i18n="unit.pts">pts</span></div>
       </div>
       <div class="score-card trolls">
-        <div class="side">Trolls</div>
-        <div class="count"><span id="trollCount">8</span> <span class="unit">trolls</span></div>
-        <div class="points"><span id="trollPts">32</span> pts</div>
+        <div class="side" data-i18n="side.trolls">Trolls</div>
+        <div class="count"><span id="trollCount">8</span> <span class="unit" data-i18n="unit.trolls">trolls</span></div>
+        <div class="points"><span id="trollPts">32</span> <span data-i18n="unit.pts">pts</span></div>
       </div>
     </div>
 
-    <div class="status" id="status">Selecciona un enano para mover o lanzar.</div>
+    <div class="status" id="status" data-i18n="status.selectDwarf">Selecciona un enano para mover o lanzar.</div>
     <div class="result" id="result" hidden></div>
-
-    <div class="actions">
-      <button id="endTurnBtn" class="btn primary" hidden>Terminar turno</button>
-      <button id="finalizeBtn" class="btn ghost">Finalizar batalla</button>
-      <button id="newBattleBtn" class="btn ghost">Nueva batalla</button>
-    </div>
 
     <div class="totals" id="totals" hidden></div>
 
     <div class="legend">
-      <div><span class="dot dwarf-dot"></span> Enano · 1 pt</div>
-      <div><span class="dot troll-dot"></span> Troll · 4 pts</div>
-      <div><span class="dot stone-dot"></span> Thudstone</div>
+      <div><span class="dot dwarf-dot"></span> <span data-i18n="legend.dwarf">Enano · 1 pt</span></div>
+      <div><span class="dot troll-dot"></span> <span data-i18n="legend.troll">Troll · 4 pts</span></div>
+      <div><span class="dot stone-dot"></span> <span data-i18n="legend.thudstone">Thudstone</span></div>
     </div>
-
-    <div class="log-wrap">
-      <h2>Registro</h2>
-      <ol id="log"></ol>
-    </div>
-
-    <details class="rules">
-      <summary>Cómo se juega</summary>
-      <p><b>Objetivo:</b> capturar el máximo de piezas rivales. Los enanos puntúan 1 por pieza viva; los trolls, 4.</p>
-      <p><b>Tablero:</b> 15×15 al que se le quitan cuatro triángulos de 15 casillas (5×5) en las esquinas. El Thudstone ocupa el centro y bloquea el paso.</p>
-      <p><b>Enanos (mueven primero):</b></p>
-      <ul>
-        <li><b>Mover:</b> como una dama de ajedrez, a casillas vacías, sin saltar piezas.</li>
-        <li><b>Hurl:</b> en una línea recta de enanos adyacentes se lanza el enano frontal hasta tantas casillas como enanos tenga la línea. Debe caer sobre un troll para capturarlo.</li>
-      </ul>
-      <p><b>Trolls:</b></p>
-      <ul>
-        <li><b>Mover:</b> como un rey, una casilla a una casilla vacía. Después puede capturar enanos adyacentes (opcional).</li>
-        <li><b>Shove:</b> una línea de trolls adyacentes empuja al troll del extremo hasta tantas casillas como trolls tenga la línea, sin ocupar casillas. Debe capturar al menos un enano adyacente al destino.</li>
-      </ul>
-      <p><b>Fin:</b> la batalla acaba cuando un bando se queda sin jugadas legales (o ambos acuerdan que no hay más capturas). Se comparan los puntos.</p>
-    </details>
   </aside>
 </main>
+
+<section class="log-wrap log-section" aria-label="Registro de la partida" data-i18n-aria="log.aria">
+  <h2 data-i18n="log.title">Registro</h2>
+  <ol id="log"></ol>
+</section>
+
+<!-- Modal: Cómo se juega -->
+<div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card">
+    <button type="button" class="modal-close" data-close data-i18n-aria="modal.close" aria-label="Cerrar">&times;</button>
+    <h2 id="helpTitle" data-i18n="help.title">Cómo se juega</h2>
+    <div class="modal-body">
+      <p data-i18n-html="help.objective"><b>Objetivo:</b> capturar el máximo de piezas rivales. Los enanos puntúan 1 por pieza viva; los trolls, 4.</p>
+
+      <h3 data-i18n-html="help.dwarfsTitle">Enanos <span>(mueven primero)</span></h3>
+      <ul>
+        <li data-i18n-html="help.dwarfsMove"><b>Mover:</b> como una dama de ajedrez, a casillas vacías, sin saltar piezas.</li>
+        <li data-i18n-html="help.dwarfsHurl"><b>Lanzar:</b> en una línea recta de enanos adyacentes se lanza el enano frontal hasta tantas casillas como enanos tenga la línea. Debe caer sobre un troll para capturarlo.</li>
+      </ul>
+
+      <h3 data-i18n="help.trollsTitle">Trolls</h3>
+      <ul>
+        <li data-i18n-html="help.trollsMove"><b>Mover:</b> como un rey, una casilla a una casilla vacía. Después puede capturar enanos adyacentes (opcional).</li>
+        <li data-i18n-html="help.trollsShove"><b>Empujar:</b> una línea de trolls adyacentes empuja al troll del extremo hasta tantas casillas como trolls tenga la línea, sin ocupar casillas. Debe capturar al menos un enano adyacente al destino.</li>
+      </ul>
+
+      <h3 data-i18n="help.controlsTitle">Controles</h3>
+      <ul>
+        <li data-i18n="help.controls1">Haz clic en una pieza propia para ver sus destinos posibles.</li>
+        <li data-i18n="help.controls2">Haz clic en un destino resaltado para ejecutar la jugada.</li>
+        <li data-i18n="help.controls3">Vuelve a hacer clic en la pieza seleccionada para deseleccionarla.</li>
+      </ul>
+
+      <p data-i18n-html="help.end"><b>Fin:</b> la batalla acaba cuando un bando se queda sin jugadas legales (o ambos acuerdan que no hay más capturas). Se comparan los puntos.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmación -->
+<div class="modal" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card modal-small">
+    <h2 id="confirmTitle" data-i18n="confirm.title">Confirmar</h2>
+    <p class="modal-text" id="confirmText"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="confirmCancel" data-i18n="btn.cancel">Cancelar</button>
+      <button type="button" class="btn primary" id="confirmOk" data-i18n="btn.confirm">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 <script src="thud-script.js"></script>
 </body>
