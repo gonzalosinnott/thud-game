@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thud — Enanos y Trolls</title>
+<link rel="stylesheet" href="thud-style.css">
+</head>
+<body>
+<header class="head">
+  <h1>THUD!</h1>
+</header>
+
+<main class="layout">
+  <section class="board-wrap">
+    <div class="board" id="board" aria-label="Tablero de Thud"></div>
+  </section>
+
+  <aside class="panel">
+    <div class="turn dwarfs" id="turn">Turno de los Enanos</div>
+
+    <div class="scores">
+      <div class="score-card dwarfs">
+        <div class="side">Enanos</div>
+        <div class="count"><span id="dwarfCount">32</span> <span class="unit">enanos</span></div>
+        <div class="points"><span id="dwarfPts">32</span> pts</div>
+      </div>
+      <div class="score-card trolls">
+        <div class="side">Trolls</div>
+        <div class="count"><span id="trollCount">8</span> <span class="unit">trolls</span></div>
+        <div class="points"><span id="trollPts">32</span> pts</div>
+      </div>
+    </div>
+
+    <div class="status" id="status">Selecciona un enano para mover o lanzar.</div>
+    <div class="result" id="result" hidden></div>
+
+    <div class="actions">
+      <button id="endTurnBtn" class="btn primary" hidden>Terminar turno</button>
+      <button id="finalizeBtn" class="btn ghost">Finalizar batalla</button>
+      <button id="newBattleBtn" class="btn ghost">Nueva batalla</button>
+    </div>
+
+    <div class="totals" id="totals" hidden></div>
+
+    <div class="legend">
+      <div><span class="dot dwarf-dot"></span> Enano · 1 pt</div>
+      <div><span class="dot troll-dot"></span> Troll · 4 pts</div>
+      <div><span class="dot stone-dot"></span> Thudstone</div>
+    </div>
+
+    <div class="log-wrap">
+      <h2>Registro</h2>
+      <ol id="log"></ol>
+    </div>
+
+    <details class="rules">
+      <summary>Cómo se juega</summary>
+      <p><b>Objetivo:</b> capturar el máximo de piezas rivales. Los enanos puntúan 1 por pieza viva; los trolls, 4.</p>
+      <p><b>Tablero:</b> 15×15 al que se le quitan cuatro triángulos de 15 casillas (5×5) en las esquinas. El Thudstone ocupa el centro y bloquea el paso.</p>
+      <p><b>Enanos (mueven primero):</b></p>
+      <ul>
+        <li><b>Mover:</b> como una dama de ajedrez, a casillas vacías, sin saltar piezas.</li>
+        <li><b>Hurl:</b> en una línea recta de enanos adyacentes se lanza el enano frontal hasta tantas casillas como enanos tenga la línea. Debe caer sobre un troll para capturarlo.</li>
+      </ul>
+      <p><b>Trolls:</b></p>
+      <ul>
+        <li><b>Mover:</b> como un rey, una casilla a una casilla vacía. Después puede capturar enanos adyacentes (opcional).</li>
+        <li><b>Shove:</b> una línea de trolls adyacentes empuja al troll del extremo hasta tantas casillas como trolls tenga la línea, sin ocupar casillas. Debe capturar al menos un enano adyacente al destino.</li>
+      </ul>
+      <p><b>Fin:</b> la batalla acaba cuando un bando se queda sin jugadas legales (o ambos acuerdan que no hay más capturas). Se comparan los puntos.</p>
+    </details>
+  </aside>
+</main>
+
+<script src="thud-script.js"></script>
+</body>
+</html>
