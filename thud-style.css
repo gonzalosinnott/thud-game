@@ -28,7 +28,7 @@ body{
   color:transparent;
   text-shadow: 0 2px 18px rgba(241,196,15,.12);
 }
-.head p{ margin:4px 0 0; font-size:.8rem; letter-spacing:.2em; text-transform:uppercase; opacity:.45; }
+.head .subtitle{ margin:-2px 0 0; font-size:.8rem; letter-spacing:.08em; opacity:.5; }
 
 .head-actions{
   position:absolute;
@@ -288,13 +288,6 @@ body.dragging .cell{ cursor:grabbing; }
 }
 .turn .end-turn:hover:not(:disabled){ background:#fff; }
 .turn .end-turn:disabled{ opacity:.6; cursor:not-allowed; }
-
-.totals{
-  font-size:.82rem; padding:10px 12px; border-radius:9px;
-  background: rgba(241,196,15,.08);
-  border:1px solid rgba(241,196,15,.2);
-  line-height:1.5;
-}
 
 .legend{ display:flex; flex-wrap:wrap; gap:6px 10px; font-size:.72rem; opacity:.85; }
 .legend div{ display:flex; align-items:center; gap:5px; }

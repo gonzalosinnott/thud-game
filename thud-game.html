@@ -8,7 +8,8 @@
 </head>
 <body>
 <header class="head">
-  <h1>THUD!</h1>
+  <h1>THUD</h1>
+  <p class="subtitle">By Terry Pratchett</p>
   <div class="head-actions">
     <button type="button" id="langBtn" class="lang-btn" aria-label="Cambiar idioma" title="Cambiar idioma">ES</button>
     <button type="button" id="helpBtn" class="help-btn" data-i18n-aria="help.open" data-i18n-title="help.open" aria-label="Cómo se juega" title="Cómo se juega">?</button>
@@ -21,12 +22,12 @@
   </section>
 
   <aside class="panel">
+    <div class="mode-badge" id="modeBadge"></div>
+
     <div class="actions">
       <button id="finalizeBtn" class="btn finalize" data-i18n="btn.finalize">Finalizar batalla</button>
       <button id="newBattleBtn" class="btn new-battle" data-i18n="btn.newBattle">Nueva batalla</button>
     </div>
-
-    <div class="mode-badge" id="modeBadge"></div>
 
     <div class="turn dwarfs" id="turn">
       <span id="turnLabel">Turno de los Enanos</span>
@@ -48,8 +49,6 @@
 
     <div class="status" id="status" data-i18n="status.selectDwarf">Selecciona un enano para mover o lanzar.</div>
     <div class="result" id="result" hidden></div>
-
-    <div class="totals" id="totals" hidden></div>
 
     <div class="legend">
       <div><span class="dot dwarf-dot"></span> <span id="legendDwarf" data-i18n="legend.dwarf">Enano · 1 pt</span></div>
@@ -137,7 +136,7 @@
           <li data-i18n="help.controls3">Vuelve a hacer clic en la pieza seleccionada para deseleccionarla.</li>
         </ul>
 
-        <p data-i18n-html="help.koom.end"><b>Fin:</b> los enanos ganan si la roca llega a la fila dorada; los trolls, si rodean la roca con tres trolls. Si nadie alcanza su objetivo, es tablas.</p>
+        <p data-i18n-html="help.koom.end"><b>Fin:</b> los enanos ganan si la roca llega a la fila dorada; los trolls, si rodean la roca con tres trolls. Si nadie alcanza su objetivo, la partida termina en empate.</p>
       </div>
     </div>
   </div>

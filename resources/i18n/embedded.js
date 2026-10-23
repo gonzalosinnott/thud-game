@@ -70,10 +70,6 @@ log.turnDwarfs=Turno de los enanos.
 log.turnTrolls=Turno de los trolls.
 log.battleEnd=Fin de la batalla — enanos: {dwarfPts} pts ({dwarfs}), trolls: {trollPts} pts ({trolls}). {verdict}
 
-totals.title.one=Acumulado en 1 batalla
-totals.title.other=Acumulado en {n} batallas
-totals.line=Enanos: {dwarfs} pts · Trolls: {trolls} pts
-
 help.title=Cómo se juega
 help.objective=<b>Objetivo:</b> capturar el máximo de piezas rivales. Los enanos puntúan 1 por pieza viva; los trolls, 4.
 help.dwarfsTitle=Enanos <span>(mueven primero)</span>
@@ -110,11 +106,11 @@ status.koomRockSelected=Roca seleccionada: debe terminar junto a un enano.
 status.tramples.one={n} pisotón posible.
 status.tramples.other={n} pisotones posibles.
 
-confirm.finalize.koom.text=¿Finalizar la batalla? Si no se alcanzó ningún objetivo, se declararán tablas.
+confirm.finalize.koom.text=¿Finalizar la batalla? Si no se alcanzó ningún objetivo, se declarará un empate.
 
 result.koom.dwarfs=<strong>Victoria de los Enanos</strong><br>La roca llegó a la fila dorada del valle.
 result.koom.trolls=<strong>Victoria de los Trolls</strong><br>Tres trolls rodearon la roca.
-result.koom.draw=<strong>Tablas</strong><br>Ningún bando alcanzó su objetivo.
+result.koom.draw=<strong>Empate</strong><br>Ningún bando alcanzó su objetivo.
 
 log.koomStart=Comienza la batalla por el Valle de Koom. Los enanos mueven primero.
 log.koomRock=La roca se mueve de {from} a {to}.
@@ -124,7 +120,7 @@ log.koomPassDwarfs=Los enanos no tienen jugadas y pasan.
 log.koomPassTrolls=Los trolls no tienen jugadas y pasan.
 log.koomEndDwarfs=Fin de la batalla: victoria de los enanos. La roca llegó al otro lado.
 log.koomEndTrolls=Fin de la batalla: victoria de los trolls. La roca quedó rodeada.
-log.koomDraw=Fin de la batalla: tablas.
+log.koomDraw=Fin de la batalla: empate.
 
 help.koom.objective=<b>Objetivo:</b> los enanos deben llevar la roca a una de las cinco casillas doradas del lado opuesto. Los trolls ganan si tres trolls quedan adyacentes a la roca.
 help.koom.dwarfsTitle=Enanos <span>(mueven primero)</span>
@@ -134,7 +130,7 @@ help.koom.trap=<b>Capturar:</b> al mover un enano, captura los trolls que queden
 help.koom.trollsTitle=Trolls
 help.koom.trollsMove=<b>Mover:</b> hasta tres casillas en línea recta, sin saltar piezas.
 help.koom.trample=<b>Pisotear:</b> salta sobre un enano adyacente y aterriza en la casilla vacía inmediatamente posterior. Puede encadenar varios pisotones cambiando de dirección.
-help.koom.end=<b>Fin:</b> los enanos ganan si la roca llega a la fila dorada; los trolls, si rodean la roca con tres trolls. Si nadie alcanza su objetivo, es tablas.
+help.koom.end=<b>Fin:</b> los enanos ganan si la roca llega a la fila dorada; los trolls, si rodean la roca con tres trolls. Si nadie alcanza su objetivo, la partida termina en empate.
 `,
   en: `# ---------------------------------------------------------------
 # Thud — English translations
@@ -203,10 +199,6 @@ log.capture=Troll captures a dwarf at {cell}.
 log.turnDwarfs=Dwarfs' turn.
 log.turnTrolls=Trolls' turn.
 log.battleEnd=Battle over — dwarfs: {dwarfPts} pts ({dwarfs}), trolls: {trollPts} pts ({trolls}). {verdict}
-
-totals.title.one=Total after 1 battle
-totals.title.other=Total after {n} battles
-totals.line=Dwarfs: {dwarfs} pts · Trolls: {trolls} pts
 
 help.title=How to play
 help.objective=<b>Objective:</b> capture as many enemy pieces as possible. Dwarfs score 1 point per living piece; trolls score 4.

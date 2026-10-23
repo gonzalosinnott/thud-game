@@ -138,9 +138,7 @@ const state = {
   captured: 0,
   over: false,
   koomWinner: null,       // dwarfs | trolls | draw
-  log: [],
-  totals: { dwarfs: 0, trolls: 0 },
-  battles: 0
+  log: []
 };
 
 const boardEl = document.getElementById("board");
@@ -1133,10 +1131,6 @@ function finishBattle(dwarfs, trolls){
   const dwarfPts = dwarfs;
   const trollPts = trolls * 4;
 
-  state.totals.dwarfs += dwarfPts;
-  state.totals.trolls += trollPts;
-  state.battles++;
-
   const verdict = resultVerdict(dwarfPts, trollPts);
 
   log("log.battleEnd", {
@@ -1260,19 +1254,6 @@ function updateUI(){
   document.getElementById("turnLabel").hidden = show;
 
   document.getElementById("finalizeBtn").hidden = state.over;
-
-  const totalsEl = document.getElementById("totals");
-  if (state.mode === "classic" && state.battles > 0){
-    totalsEl.hidden = false;
-    const title = state.battles === 1
-      ? t("totals.title.one")
-      : t("totals.title.other", { n: state.battles });
-    totalsEl.innerHTML =
-      "<strong>" + title + "</strong><br>" +
-      t("totals.line", { dwarfs: state.totals.dwarfs, trolls: state.totals.trolls });
-  } else {
-    totalsEl.hidden = true;
-  }
 }
 
 function log(key, params, highlight){
@@ -1409,7 +1390,7 @@ document.getElementById("newBattleBtn").addEventListener("click", async () => {
     );
     if (!ok) return;
   }
-  setupBoard(state.mode);
+  openModal(modeModal);
 });
 
 /* ---------- ARRANQUE ---------- */
