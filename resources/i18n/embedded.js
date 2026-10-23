@@ -1,7 +1,7 @@
-/* Traducciones embebidas para poder abrir thud-game.html con file://.
+/* Traducciones embebidas para usar como respaldo si falla la carga de los .properties.
    Se generan desde resources/i18n/es.properties y en.properties.
-   Si editás esos archivos, regenerá o actualizá también este archivo. */
-window.THUD_EMBEDDED_PROPERTIES = {
+   Ejecutar: node resources/i18n/generate-embedded.mjs */
+export const THUD_EMBEDDED_PROPERTIES = {
   es: `# ---------------------------------------------------------------
 # Thud — Traducciones al castellano
 # ---------------------------------------------------------------
