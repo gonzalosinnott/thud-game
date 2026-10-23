@@ -144,6 +144,46 @@ const state = {
 const boardEl = document.getElementById("board");
 const cells = new Map();
 
+/* ---------- SONIDOS ---------- */
+const SOUND_VOLUME = { pickup: .55, putdown: .6, move: .32, thud: .7 };
+const soundPlayers = {
+  pickup: new Audio("resources/assets/pick-up.mp3"),
+  putdown: new Audio("resources/assets/put-down.mp3"),
+  move: new Audio("resources/assets/piece-movement.mp3"),
+  thud: new Audio("resources/assets/thud.mp3")
+};
+
+for (const [name, audio] of Object.entries(soundPlayers)){
+  audio.preload = "auto";
+  audio.volume = SOUND_VOLUME[name];
+}
+
+function playSound(name, { loop = false } = {}){
+  const audio = soundPlayers[name];
+  if (!audio) return;
+  audio.loop = loop;
+  try {
+    audio.currentTime = 0;
+    const playback = audio.play();
+    if (playback && typeof playback.catch === "function"){
+      playback.catch(() => { /* el navegador bloqueó el audio */ });
+    }
+  } catch (err) {
+    /* audio no disponible */
+  }
+}
+
+function stopSound(name){
+  const audio = soundPlayers[name];
+  if (!audio || audio.paused) return;
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+  } catch (err) {
+    /* audio no disponible */
+  }
+}
+
 function pieceEl(p){
   const el = document.createElement("div");
   el.className = "piece " + p.type;
@@ -346,6 +386,7 @@ function selectPiece(r, c){
   state.targets = state.turn === "dwarfs"
     ? dwarfTargets(r, c)
     : trollTargets(r, c);
+  playSound("pickup");
   render();
   updateUI();
 }
@@ -386,10 +427,12 @@ function onCellClick(r, c){
 }
 
 function clearSelection(){
+  const hadSelection = !!state.selected;
   state.selected = null;
   state.targets = [];
   render();
   updateUI();
+  if (hadSelection) playSound("putdown");
 }
 
 /* ---------- ARRASTRAR PIEZAS ---------- */
@@ -428,7 +471,9 @@ function onPointerDown(e){
     active: false,
     ghost: null,
     sourceEl: null,
-    hoverCell: null
+    hoverCell: null,
+    moveSoundStarted: false,
+    moveSoundTimer: null
   };
 }
 
@@ -461,6 +506,15 @@ function moveGhost(e){
   drag.ghost.style.top = e.clientY + "px";
 }
 
+function startDragMovementSound(){
+  if (!drag || drag.moveSoundStarted) return;
+  drag.moveSoundStarted = true;
+  drag.moveSoundTimer = setTimeout(() => {
+    drag.moveSoundTimer = null;
+    if (drag && drag.active) playSound("move", { loop: true });
+  }, 120);
+}
+
 function updateDragHover(e){
   const cell = cellFromPoint(e.clientX, e.clientY);
   if (drag.hoverCell && drag.hoverCell !== cell){
@@ -485,6 +539,7 @@ function onPointerMove(e){
     const dy = e.clientY - drag.startY;
     if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
     startDrag(e);
+    startDragMovementSound();
   }
 
   e.preventDefault();
@@ -494,6 +549,8 @@ function onPointerMove(e){
 
 function cleanupDrag(){
   if (!drag) return;
+  if (drag.moveSoundTimer) clearTimeout(drag.moveSoundTimer);
+  if (drag.moveSoundStarted) stopSound("move");
   if (drag.ghost) drag.ghost.remove();
   if (drag.hoverCell) drag.hoverCell.classList.remove("drop-hover");
   if (drag.sourceEl) drag.sourceEl.classList.remove("drag-origin");
@@ -533,15 +590,22 @@ function onPointerUp(e){
   if (!active) return;
 
   suppressNextClick(sourceCell, dropCell);
-  if (target) executeTarget(target, false);
-  else render();
+  if (target){
+    executeTarget(target, false);
+  } else {
+    render();
+    playSound("putdown");
+  }
 }
 
 function cancelDrag(){
   if (!drag) return;
   const active = drag.active;
   cleanupDrag();
-  if (active) render();
+  if (active){
+    render();
+    playSound("putdown");
+  }
 }
 
 function onPointerCancel(e){
@@ -553,6 +617,7 @@ let moveAnimation = null;
 let animatingMove = false;
 
 function cancelMoveAnimation(){
+  stopSound("move");
   if (!moveAnimation) return;
   const { ghost, sourceEl, animation } = moveAnimation;
   if (animation){
@@ -566,7 +631,14 @@ function cancelMoveAnimation(){
 
 function executeTarget(tgt, animate = true){
   if (animate && animateMove(tgt)) return;
+  finishMove(tgt);
+}
+
+function finishMove(tgt){
+  stopSound("move");
+  const capturesPiece = state.turn === "dwarfs" && tgt.kind === "lanzar";
   applyTarget(tgt);
+  playSound(capturesPiece ? "thud" : "putdown");
 }
 
 function animateMove(tgt){
@@ -606,6 +678,7 @@ function animateMove(tgt){
   ghost.style.left = sourceX + "px";
   ghost.style.top = sourceY + "px";
   document.body.appendChild(ghost);
+  playSound("move", { loop: true });
 
   sourceEl.classList.add("move-origin");
   animatingMove = true;
@@ -630,7 +703,7 @@ function animateMove(tgt){
     sourceEl.classList.remove("move-origin");
     moveAnimation = null;
     animatingMove = false;
-    applyTarget(tgt);
+    finishMove(tgt);
   }).catch(() => { /* animación cancelada */ });
 
   return true;
@@ -693,6 +766,7 @@ function doCapture(r, c){
   state.board[r][c] = empty();
   state.captureCells = state.captureCells.filter(p => !(p.r === r && p.c === c));
   state.captured++;
+  playSound("thud");
   log("log.capture", { cell: coord({ r, c }) });
 
   if (state.captureCells.length === 0){
