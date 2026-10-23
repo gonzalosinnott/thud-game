@@ -21,10 +21,28 @@ function parseProperties(text){
 }
 
 async function loadLocale(lang){
-  const res = await fetch("resources/i18n/" + lang + ".properties", { cache: "no-store" });
-  if (!res.ok) throw new Error("No se pudo cargar " + lang + ".properties (HTTP " + res.status + ")");
-  messages = parseProperties(await res.text());
-  currentLang = lang;
+  const embedded = (window.THUD_EMBEDDED_PROPERTIES || {})[lang];
+
+  // file:// bloquea fetch por CORS. En ese caso usamos la copia embebida.
+  if (location.protocol === "file:"){
+    if (!embedded) throw new Error("No hay traducciones embebidas para " + lang);
+    messages = parseProperties(embedded);
+    currentLang = lang;
+    return;
+  }
+
+  try {
+    const res = await fetch("resources/i18n/" + lang + ".properties", { cache: "no-store" });
+    if (!res.ok) throw new Error("No se pudo cargar " + lang + ".properties (HTTP " + res.status + ")");
+    messages = parseProperties(await res.text());
+    currentLang = lang;
+  } catch (err) {
+    // Si el servidor no tiene los .properties, seguimos funcionando con la copia embebida.
+    if (!embedded) throw err;
+    console.warn("No se pudo cargar " + lang + ".properties; se usan las traducciones embebidas.", err);
+    messages = parseProperties(embedded);
+    currentLang = lang;
+  }
 }
 
 function t(key, params){
@@ -129,13 +147,6 @@ const cells = new Map();
 function pieceEl(p){
   const el = document.createElement("div");
   el.className = "piece " + p.type;
-  if (p.type === "dwarf") el.textContent = "d";
-  else if (p.type === "troll") el.textContent = "T";
-  else if (p.type === "thudstone"){
-    const s = document.createElement("span");
-    s.textContent = "X";
-    el.appendChild(s);
-  }
   return el;
 }
 
@@ -428,16 +439,14 @@ function startDrag(e){
 
   const sourceCell = cells.get(key(drag.from.r, drag.from.c));
   const sourceEl = sourceCell ? sourceCell.querySelector(".piece") : null;
-  const rect = sourceEl ? sourceEl.getBoundingClientRect() : null;
+  const sourceStyle = sourceEl ? getComputedStyle(sourceEl) : null;
 
   const ghost = pieceEl(state.board[drag.from.r][drag.from.c]);
   ghost.classList.add("drag-ghost");
-  if (rect){
-    ghost.style.width = rect.width + "px";
-    ghost.style.height = rect.height + "px";
-  }
-  if (sourceEl){
-    ghost.style.fontSize = getComputedStyle(sourceEl).fontSize;
+  if (sourceStyle){
+    ghost.style.width = sourceStyle.width;
+    ghost.style.height = sourceStyle.height;
+    ghost.style.fontSize = sourceStyle.fontSize;
     sourceEl.classList.add("drag-origin");
   }
 
@@ -588,11 +597,12 @@ function animateMove(tgt){
   const distance = Math.hypot(dx, dy);
   const lift = Math.min(40, 22 + distance * 0.1);
 
+  const sourceStyle = getComputedStyle(sourceEl);
   const ghost = pieceEl(piece);
   ghost.classList.add("move-ghost");
-  ghost.style.width = sourceRect.width + "px";
-  ghost.style.height = sourceRect.height + "px";
-  ghost.style.fontSize = getComputedStyle(sourceEl).fontSize;
+  ghost.style.width = sourceStyle.width;
+  ghost.style.height = sourceStyle.height;
+  ghost.style.fontSize = sourceStyle.fontSize;
   ghost.style.left = sourceX + "px";
   ghost.style.top = sourceY + "px";
   document.body.appendChild(ghost);
@@ -994,8 +1004,8 @@ async function init(){
   } catch (err) {
     console.error("No se pudieron cargar las traducciones:", err);
     document.getElementById("status").textContent =
-      "No se pudieron cargar las traducciones. Abrí la página desde un servidor HTTP o desde GitHub Pages. / " +
-      "Could not load translations. Open the page from an HTTP server or GitHub Pages.";
+      "No se pudieron cargar las traducciones. Revisá resources/i18n/. / " +
+      "Could not load translations. Check resources/i18n/.";
     return;
   }
   applyTranslations();
