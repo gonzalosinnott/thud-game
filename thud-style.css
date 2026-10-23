@@ -106,6 +106,12 @@ body{
 .cell.tgt-move{ box-shadow: inset 0 0 0 2px rgba(34,197,94,.85), inset 0 0 14px rgba(34,197,94,.28); }
 .cell.tgt-lanzar{ box-shadow: inset 0 0 0 2px rgba(239,68,68,.8), inset 0 0 14px rgba(239,68,68,.24); }
 .cell.tgt-empujar{ box-shadow: inset 0 0 0 2px rgba(245,158,11,.85), inset 0 0 14px rgba(245,158,11,.28); }
+.cell.tgt-trample{ box-shadow: inset 0 0 0 2px rgba(230,126,34,.9), inset 0 0 14px rgba(230,126,34,.3); }
+.cell.koom-goal::before{
+  content:""; position:absolute; inset:0; border-radius:4px;
+  box-shadow: inset 0 0 0 2px rgba(241,196,15,.55), inset 0 0 16px rgba(241,196,15,.16);
+  pointer-events:none;
+}
 
 .cell.tgt-move::after{
   content:""; position:absolute; left:50%; top:50%;
@@ -122,6 +128,12 @@ body{
   content:"\00bb"; position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
   font-size: calc(var(--cell) * .8); font-weight:900; color:#b9770e;
+  line-height:1; pointer-events:none;
+}
+.cell.tgt-trample::after{
+  content:"\00d7"; position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size: calc(var(--cell) * .85); font-weight:900; color:#b9540b;
   line-height:1; pointer-events:none;
 }
 .cell.selected{ box-shadow: inset 0 0 0 3px #f1c40f, inset 0 0 14px rgba(241,196,15,.35); }
@@ -188,7 +200,20 @@ body.dragging{ user-select:none; }
 body.dragging .cell{ cursor:grabbing; }
 
 /* ---------- PANEL ---------- */
-.panel{ width:280px; max-width:100%; display:flex; flex-direction:column; gap:9px; }
+.panel{ width:280px; max-width:100%; align-self:stretch; display:flex; flex-direction:column; gap:9px; }
+
+.mode-badge{
+  align-self:flex-start;
+  padding:4px 9px;
+  border-radius:999px;
+  border:1px solid rgba(241,196,15,.28);
+  background: rgba(241,196,15,.08);
+  color:#f5d76e;
+  font-size:.64rem;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
 
 .turn{
   padding:10px 12px; border-radius:10px; font-weight:800;
@@ -294,15 +319,22 @@ body.dragging .cell{ cursor:grabbing; }
 #log li.hl{ color:#f5d76e; font-weight:600; opacity:1; }
 
 .log-section{
-  width:min(100%, 980px);
-  margin:54px auto 0;
-  padding:16px 20px;
+  width:100%;
+  margin:6px 0 0;
+  padding:12px 14px;
+  flex:1 1 0;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
   background: rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.07);
   border-radius:14px;
 }
-.log-section h2{ font-size:.78rem; margin-bottom:9px; }
-.log-section #log{ max-height:210px; font-size:.82rem; }
+.log-section h2{ font-size:.78rem; margin:0 0 8px; }
+.log-section #log{
+  flex:1 1 auto; min-height:0; max-height:none; font-size:.82rem;
+}
 
 /* ---------- MODALES ---------- */
 .modal{
@@ -329,6 +361,50 @@ body.dragging .cell{ cursor:grabbing; }
   animation: modal-in .18s ease-out;
 }
 .modal-card.modal-small{ width:min(420px, 100%); }
+.mode-card{ width:min(620px, 100%); }
+.mode-options{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:20px;
+}
+.mode-option{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-height:142px;
+  padding:18px;
+  text-align:left;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+  color:#e8eef4;
+  font-family:inherit;
+  cursor:pointer;
+  transition: transform .15s, border-color .15s, background .15s, box-shadow .15s;
+}
+.mode-option:hover{
+  transform:translateY(-2px);
+  border-color: rgba(241,196,15,.62);
+  background: linear-gradient(160deg, rgba(241,196,15,.15), rgba(255,255,255,.035));
+  box-shadow:0 14px 28px rgba(0,0,0,.28);
+}
+.mode-option:focus-visible{ outline:2px solid #f1c40f; outline-offset:3px; }
+.mode-name{
+  color:#f5d76e;
+  font-size:1.02rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+.mode-desc{
+  color:#b9c7d5;
+  font-size:.82rem;
+  line-height:1.45;
+}
+@media (max-width: 520px){
+  .mode-options{ grid-template-columns:1fr; }
+  .mode-option{ min-height:0; }
+}
 .modal-card h2{
   margin:0 0 14px;
   font-size:1.18rem;
@@ -386,6 +462,10 @@ body.modal-open{ overflow:hidden; }
   line-height:1.5;
 }
 .result strong{ color:#f5d76e; }
+
+@media (max-width: 1000px){
+  .log-section{ flex:1 1 auto; max-height:210px; }
+}
 
 @media (max-width: 760px){
   .layout{ gap:28px; }

@@ -127,15 +127,17 @@ const key = (r, c) => r + "," + c;
 const coord = p => String.fromCharCode(65 + p.c) + (p.r + 1);
 
 const state = {
+  mode: "classic",        // classic | koom
   board: [],
   turn: "dwarfs",
-  phase: "normal",        // normal | capture
+  phase: "normal",        // normal | capture | trample
   selected: null,         // {r,c}
   targets: [],            // {r,c,kind,from?,line?}
   captureCells: [],       // enanos capturables tras mover un troll
   mustCapture: false,
   captured: 0,
   over: false,
+  koomWinner: null,       // dwarfs | trolls | draw
   log: [],
   totals: { dwarfs: 0, trolls: 0 },
   battles: 0
@@ -216,6 +218,10 @@ function render(){
       const el = cells.get(key(r, c));
       el.className = "cell";
 
+      if (state.mode === "koom" && r === 0 && c >= 5 && c <= 9){
+        el.classList.add("koom-goal");
+      }
+
       if (state.selected && state.selected.r === r && state.selected.c === c){
         el.classList.add("selected");
       }
@@ -233,15 +239,18 @@ function render(){
       if (p && p.type) el.appendChild(pieceEl(p));
 
       const canDrag = !state.over && state.phase === "normal" &&
-        p && p.type !== "thudstone" && p.owner === state.turn;
+        p && (p.type !== "thudstone" || state.mode === "koom") &&
+        p.owner === state.turn;
       if (canDrag) el.classList.add("draggable");
     }
   }
 }
 
 /* ---------- PREPARACIÓN ---------- */
-function setupBoard(){
+function setupBoard(mode = state.mode){
   cancelMoveAnimation();
+  state.mode = mode === "koom" ? "koom" : "classic";
+
   state.board = [];
   for (let r = 0; r < N; r++){
     state.board[r] = [];
@@ -250,6 +259,27 @@ function setupBoard(){
     }
   }
 
+  if (state.mode === "koom") setupKoomPieces();
+  else setupClassicPieces();
+
+  state.turn = "dwarfs";
+  state.phase = "normal";
+  state.selected = null;
+  state.targets = [];
+  state.captureCells = [];
+  state.mustCapture = false;
+  state.captured = 0;
+  state.over = false;
+  state.koomWinner = null;
+  state.log = [];
+  document.getElementById("result").hidden = true;
+
+  log(state.mode === "koom" ? "log.koomStart" : "log.battleStart");
+  render();
+  updateUI();
+}
+
+function setupClassicPieces(){
   // Thudstone en el centro
   state.board[7][7] = { type:"thudstone", owner:null };
 
@@ -271,25 +301,51 @@ function setupBoard(){
     }
   }
   console.assert(placed === 32, "Enanos colocados:", placed);
+}
 
-  state.turn = "dwarfs";
-  state.phase = "normal";
-  state.selected = null;
-  state.targets = [];
-  state.captureCells = [];
-  state.mustCapture = false;
-  state.captured = 0;
-  state.over = false;
-  state.log = [];
-  document.getElementById("result").hidden = true;
+/* Valle de Koom: la roca empieza en el centro, los trolls forman una cuña
+   cerca del lado objetivo y los enanos defienden la mitad inferior. */
+function setupKoomPieces(){
+  state.board[7][7] = { type:"thudstone", owner:"dwarfs" };
 
-  log("log.battleStart");
-  render();
-  updateUI();
+  const trolls = [
+    [1,5], [1,7], [1,9],
+    [2,4], [2,5], [2,7], [2,9], [2,10]
+  ];
+  for (const [r, c] of trolls){
+    state.board[r][c] = { type:"troll", owner:"trolls" };
+  }
+
+  const dwarfs = [
+    [8,7],
+    [9,0], [9,14],
+    [10,1], [10,13],
+    [11,2], [11,12],
+    [12,3], [12,11],
+    [13,4], [13,10],
+    [14,5], [14,6], [14,7], [14,8], [14,9]
+  ];
+  for (const [r, c] of dwarfs){
+    state.board[r][c] = { type:"dwarf", owner:"dwarfs" };
+  }
+  console.assert(trolls.length === 8 && dwarfs.length === 16, "Piezas de Koom:", trolls.length, dwarfs.length);
 }
 
 /* ---------- MOVIMIENTOS POSIBLES ---------- */
 function dwarfTargets(r, c){
+  if (state.mode === "koom"){
+    const p = state.board[r][c];
+    if (p && p.type === "thudstone") return rockTargets(r, c);
+    return dwarfTargetsKoom(r, c);
+  }
+  return dwarfTargetsClassic(r, c);
+}
+
+function trollTargets(r, c){
+  return state.mode === "koom" ? trollTargetsKoom(r, c) : trollTargetsClassic(r, c);
+}
+
+function dwarfTargetsClassic(r, c){
   const out = [];
 
   // Mover como dama: solo a casillas vacías (no captura al mover)
@@ -333,7 +389,7 @@ function dwarfTargets(r, c){
   return out;
 }
 
-function trollTargets(r, c){
+function trollTargetsClassic(r, c){
   const out = [];
 
   // Mover como rey: una casilla, a casilla vacía
@@ -369,6 +425,113 @@ function trollTargets(r, c){
   return out;
 }
 
+/* Koom: los enanos mueven como dama, sin lanzar. */
+function dwarfTargetsKoom(r, c){
+  const out = [];
+  for (const [dr, dc] of DIRS){
+    let rr = r + dr, cc = c + dc;
+    while (inBoard(rr, cc)){
+      if (state.board[rr][cc].type) break;
+      out.push({ r:rr, c:cc, kind:"move" });
+      rr += dr; cc += dc;
+    }
+  }
+  return out;
+}
+
+/* Koom: la roca se mueve una casilla y debe empezar y terminar junto a un enano. */
+function rockTargets(r, c){
+  const out = [];
+  if (!adjacentDwarfs(r, c).length) return out;
+
+  for (const [dr, dc] of DIRS){
+    const rr = r + dr, cc = c + dc;
+    if (!inBoard(rr, cc) || state.board[rr][cc].type) continue;
+    if (adjacentDwarfs(rr, cc).length){
+      out.push({ r:rr, c:cc, kind:"move" });
+    }
+  }
+  return out;
+}
+
+/* Koom: los trolls avanzan hasta 3 casillas o pisotean a un enano adyacente. */
+function trollTargetsKoom(r, c){
+  const out = [];
+
+  for (const [dr, dc] of DIRS){
+    for (let k = 1; k <= 3; k++){
+      const rr = r + dr * k, cc = c + dc * k;
+      if (!inBoard(rr, cc)) break;
+      if (state.board[rr][cc].type) break;
+      out.push({ r:rr, c:cc, kind:"move" });
+    }
+  }
+
+  for (const [dr, dc] of DIRS){
+    const tr = r + dr, tc = c + dc;
+    const lr = r + dr * 2, lc = c + dc * 2;
+    if (!inBoard(tr, tc) || !inBoard(lr, lc)) continue;
+    if (state.board[tr][tc].type === "dwarf" && !state.board[lr][lc].type){
+      out.push({
+        r:lr, c:lc, kind:"trample",
+        captured:{ r:tr, c:tc }
+      });
+    }
+  }
+  return out;
+}
+
+function findRock(){
+  for (let r = 0; r < N; r++){
+    for (let c = 0; c < N; c++){
+      const p = state.board[r][c];
+      if (p && p.type === "thudstone") return { r, c };
+    }
+  }
+  return null;
+}
+
+function rockOnGoal(){
+  const rock = findRock();
+  return !!rock && rock.r === 0 && rock.c >= 5 && rock.c <= 9;
+}
+
+function trollsAdjacentToRock(){
+  const rock = findRock();
+  if (!rock) return 0;
+  let n = 0;
+  for (const [dr, dc] of DIRS){
+    const rr = rock.r + dr, cc = rock.c + dc;
+    if (inBoard(rr, cc) && state.board[rr][cc].type === "troll") n++;
+  }
+  return n;
+}
+
+/* Koom: un troll queda atrapado si el enano movido y otro enano lo
+   flanquean en línea recta (incluidas las diagonales). */
+function trappedTrollsFrom(pos){
+  const out = [];
+  for (const [dr, dc] of DIRS){
+    const tr = pos.r + dr, tc = pos.c + dc;
+    const br = pos.r + dr * 2, bc = pos.c + dc * 2;
+    if (!inBoard(tr, tc) || !inBoard(br, bc)) continue;
+    if (state.board[tr][tc].type === "troll" &&
+        state.board[br][bc].type === "dwarf"){
+      out.push({ r:tr, c:tc });
+    }
+  }
+  return out;
+}
+
+function captureTrappedTrolls(pos){
+  const trapped = trappedTrollsFrom(pos);
+  for (const p of trapped){
+    state.board[p.r][p.c] = empty();
+    log("log.koomTrap", { cell: coord(p) }, true);
+  }
+  return trapped.length > 0;
+}
+
 function adjacentDwarfs(r, c){
   const out = [];
   for (const [dr, dc] of DIRS){
@@ -399,6 +562,13 @@ function onCellClick(r, c){
     if (state.captureCells.some(p => p.r === r && p.c === c)){
       doCapture(r, c);
     }
+    return;
+  }
+
+  // Koom: tras un pisotón, se pueden encadenar más pisotones.
+  if (state.phase === "trample"){
+    const tgt = state.targets.find(t => t.r === r && t.c === c);
+    if (tgt) executeTarget(tgt);
     return;
   }
 
@@ -461,7 +631,8 @@ function onPointerDown(e){
   const r = Number(cell.dataset.r);
   const c = Number(cell.dataset.c);
   const p = state.board[r][c];
-  if (!p || p.type === "thudstone" || p.owner !== state.turn) return;
+  if (!p || p.owner !== state.turn) return;
+  if (p.type === "thudstone" && state.mode !== "koom") return;
 
   drag = {
     pointerId: e.pointerId,
@@ -636,9 +807,8 @@ function executeTarget(tgt, animate = true){
 
 function finishMove(tgt){
   stopSound("move");
-  const capturesPiece = state.turn === "dwarfs" && tgt.kind === "lanzar";
-  applyTarget(tgt);
-  playSound(capturesPiece ? "thud" : "putdown");
+  const captured = applyTarget(tgt);
+  playSound(captured ? "thud" : "putdown");
 }
 
 function animateMove(tgt){
@@ -651,7 +821,7 @@ function animateMove(tgt){
   if (!from) return false;
 
   const piece = state.board[from.r][from.c];
-  if (!piece || piece.type === "thudstone") return false;
+  if (!piece || (piece.type === "thudstone" && state.mode !== "koom")) return false;
 
   const sourceCell = cells.get(key(from.r, from.c));
   const targetCell = cells.get(key(tgt.r, tgt.c));
@@ -712,11 +882,14 @@ function animateMove(tgt){
 function applyTarget(tgt){
   const from = state.selected;
 
+  if (state.mode === "koom") return applyKoomTarget(tgt, from);
+
   if (state.turn === "dwarfs"){
     if (tgt.kind === "move"){
       movePiece(from, tgt);
       log("log.dwarfMove", { from: coord(from), to: coord(tgt) });
       endTurn();
+      return false;
     } else {
       // Lanzar: el enano frontal vuela, el troll desaparece y el enano ocupa su casilla
       const lead = tgt.from;
@@ -725,8 +898,8 @@ function applyTarget(tgt){
       state.board[tgt.r][tgt.c] = { type:"dwarf", owner:"dwarfs" };
       log("log.hurl", { from: coord(lead), to: coord(tgt) }, true);
       endTurn();
+      return true;
     }
-    return;
   }
 
   if (tgt.kind === "move"){
@@ -738,6 +911,74 @@ function applyTarget(tgt){
     log("log.shove", { from: coord(from), to: coord(tgt) }, true);
     startCapture(true, tgt);
   }
+  return false;
+}
+
+function applyKoomTarget(tgt, from){
+  if (!from) return false;
+  const piece = state.board[from.r][from.c];
+
+  if (state.turn === "dwarfs"){
+    // La roca se mueve una casilla, sin capturar por sí misma.
+    if (piece && piece.type === "thudstone"){
+      movePiece(from, tgt);
+      log("log.koomRock", { from: coord(from), to: coord(tgt) });
+      if (rockOnGoal()){
+        finishKoomBattle("dwarfs");
+        return false;
+      }
+      endTurn();
+      return false;
+    }
+
+    // Los enanos capturan trolls atrapados al terminar el movimiento.
+    movePiece(from, tgt);
+    log("log.dwarfMove", { from: coord(from), to: coord(tgt) });
+    const captured = captureTrappedTrolls(tgt);
+    endTurn();
+    return captured;
+  }
+
+  if (tgt.kind === "trample"){
+    const victim = tgt.captured;
+    movePiece(from, tgt);
+    if (victim) state.board[victim.r][victim.c] = empty();
+    state.captured++;
+    log("log.koomTrample", {
+      from: coord(from),
+      to: coord(tgt),
+      cell: victim ? coord(victim) : coord(tgt)
+    }, true);
+
+    if (trollsAdjacentToRock() >= 3){
+      finishKoomBattle("trolls");
+      return true;
+    }
+
+    const next = trollTargetsKoom(tgt.r, tgt.c).filter(t => t.kind === "trample");
+    if (next.length){
+      state.selected = { r: tgt.r, c: tgt.c };
+      state.targets = next;
+      state.phase = "trample";
+      state.mustCapture = false;
+      state.captureCells = [];
+      render();
+      updateUI();
+    } else {
+      endTurn();
+    }
+    return true;
+  }
+
+  // Movimiento normal del troll: hasta 3 casillas, sin capturas encadenadas.
+  movePiece(from, tgt);
+  log("log.trollMove", { from: coord(from), to: coord(tgt) });
+  if (trollsAdjacentToRock() >= 3){
+    finishKoomBattle("trolls");
+    return false;
+  }
+  endTurn();
+  return false;
 }
 
 function movePiece(from, to){
@@ -788,6 +1029,22 @@ function endTurn(){
 
   state.turn = state.turn === "dwarfs" ? "trolls" : "dwarfs";
 
+  if (state.mode === "koom"){
+    const other = state.turn === "dwarfs" ? "trolls" : "dwarfs";
+    const nextCanMove = hasAnyMove(state.turn);
+    const otherCanMove = hasAnyMove(other);
+    if (!nextCanMove && !otherCanMove){
+      render();
+      finishKoomBattle("draw");
+      return;
+    }
+    if (!nextCanMove && otherCanMove){
+      // Si un bando no puede actuar, el otro sigue jugando.
+      log(state.turn === "dwarfs" ? "log.koomPassDwarfs" : "log.koomPassTrolls");
+      state.turn = other;
+    }
+  }
+
   render();
 
   if (checkBattleOver()) return;
@@ -820,6 +1077,16 @@ function hasAnyMove(player){
 }
 
 function checkBattleOver(){
+  if (state.over) return true;
+
+  if (state.mode === "koom"){
+    if (!hasAnyMove("dwarfs") && !hasAnyMove("trolls")){
+      finishKoomBattle("draw");
+      return true;
+    }
+    return false;
+  }
+
   const dwarfs = countType("dwarf");
   const trolls = countType("troll");
   if (dwarfs === 0 || trolls === 0 || !hasAnyMove(state.turn)){
@@ -841,11 +1108,17 @@ function resultVerdict(dwarfPts, trollPts){
 }
 
 function renderResult(dwarfs, trolls, verdict){
+  const result = document.getElementById("result");
+  result.hidden = false;
+
+  if (state.mode === "koom"){
+    result.innerHTML = t("result.koom." + (state.koomWinner || "draw"));
+    return;
+  }
+
   const dwarfPts = dwarfs;          // 1 punto por enano vivo
   const trollPts = trolls * 4;      // 4 puntos por troll vivo
   const finalVerdict = verdict || resultVerdict(dwarfPts, trollPts);
-  const result = document.getElementById("result");
-  result.hidden = false;
   result.innerHTML = t("result.battle", {
     dwarfs,
     dwarfPts,
@@ -879,6 +1152,30 @@ function finishBattle(dwarfs, trolls){
   updateUI();
 }
 
+function finishKoomBattle(winner){
+  if (state.over) return;
+  state.over = true;
+  state.koomWinner = winner;
+  state.phase = "normal";
+  state.selected = null;
+  state.targets = [];
+  state.captureCells = [];
+  state.mustCapture = false;
+  state.captured = 0;
+
+  log(
+    winner === "dwarfs" ? "log.koomEndDwarfs" :
+    winner === "trolls" ? "log.koomEndTrolls" :
+    "log.koomDraw",
+    null,
+    true
+  );
+
+  renderResult(countType("dwarf"), countType("troll"));
+  render();
+  updateUI();
+}
+
 /* ---------- INTERFAZ ---------- */
 function updateUI(){
   const dwarfs = countType("dwarf");
@@ -888,6 +1185,24 @@ function updateUI(){
   document.getElementById("trollCount").textContent = trolls;
   document.getElementById("dwarfPts").textContent = dwarfs;
   document.getElementById("trollPts").textContent = trolls * 4;
+
+  document.querySelectorAll(".score-card .points").forEach(el => {
+    el.hidden = state.mode === "koom";
+  });
+
+  document.getElementById("modeBadge").textContent =
+    t(state.mode === "koom" ? "mode.koom.name" : "mode.classic.name");
+
+  document.getElementById("legendDwarf").textContent =
+    t(state.mode === "koom" ? "legend.dwarf.koom" : "legend.dwarf");
+  document.getElementById("legendTroll").textContent =
+    t(state.mode === "koom" ? "legend.troll.koom" : "legend.troll");
+  document.getElementById("legendStone").textContent =
+    t(state.mode === "koom" ? "legend.rock" : "legend.thudstone");
+
+  document.querySelectorAll("[data-help-mode]").forEach(el => {
+    el.hidden = el.dataset.helpMode !== state.mode;
+  });
 
   const turnEl = document.getElementById("turn");
   document.getElementById("turnLabel").textContent = state.turn === "dwarfs" ? t("turn.dwarfs") : t("turn.trolls");
@@ -900,36 +1215,54 @@ function updateUI(){
     statusEl.textContent = (state.mustCapture && state.captured === 0)
       ? t("status.shoveRequired")
       : t("status.captureOptional");
+  } else if (state.phase === "trample"){
+    statusEl.textContent = t("status.koomTrample");
   } else if (state.selected){
     const n = state.targets.length;
-    const lanzamientos = state.targets.filter(target => target.kind === "lanzar").length;
-    const empujes = state.targets.filter(target => target.kind === "empujar").length;
     if (!n){
       statusEl.textContent = t("status.noMoves");
+    } else if (state.mode === "koom"){
+      let txt = t(n === 1 ? "status.targets.one" : "status.targets.other", { n });
+      const tramples = state.targets.filter(target => target.kind === "trample").length;
+      if (tramples){
+        txt += " " + t(tramples === 1 ? "status.tramples.one" : "status.tramples.other", { n: tramples });
+      }
+      const selectedPiece = state.board[state.selected.r][state.selected.c];
+      if (state.turn === "dwarfs" && selectedPiece && selectedPiece.type === "thudstone"){
+        txt = t("status.koomRockSelected") + " " + txt;
+      }
+      statusEl.textContent = txt;
     } else {
+      const lanzamientos = state.targets.filter(target => target.kind === "lanzar").length;
+      const empujes = state.targets.filter(target => target.kind === "empujar").length;
       let txt = t(n === 1 ? "status.targets.one" : "status.targets.other", { n });
       if (lanzamientos) txt += " " + t(lanzamientos === 1 ? "status.hurls.one" : "status.hurls.other", { n: lanzamientos });
       if (empujes) txt += " " + t(empujes === 1 ? "status.shoves.one" : "status.shoves.other", { n: empujes });
       statusEl.textContent = txt;
     }
   } else {
-    statusEl.textContent = state.turn === "dwarfs" ? t("status.selectDwarf") : t("status.selectTroll");
+    if (state.mode === "koom"){
+      statusEl.textContent = state.turn === "dwarfs"
+        ? t("status.koomSelectDwarf")
+        : t("status.koomSelectTroll");
+    } else {
+      statusEl.textContent = state.turn === "dwarfs" ? t("status.selectDwarf") : t("status.selectTroll");
+    }
   }
 
   const btn = document.getElementById("endTurnBtn");
-  const show = state.phase === "capture" && !state.over;
+  const show = (state.phase === "capture" || state.phase === "trample") && !state.over;
+  const mustCaptureNow = state.phase === "capture" && state.mustCapture && state.captured === 0;
   btn.hidden = !show;
-  btn.disabled = state.mustCapture && state.captured === 0;
-  btn.textContent = (state.mustCapture && state.captured === 0)
-    ? t("btn.captureRequired")
-    : t("btn.endTurn");
+  btn.disabled = mustCaptureNow;
+  btn.textContent = mustCaptureNow ? t("btn.captureRequired") : t("btn.endTurn");
   turnEl.classList.toggle("has-action", show);
   document.getElementById("turnLabel").hidden = show;
 
   document.getElementById("finalizeBtn").hidden = state.over;
 
   const totalsEl = document.getElementById("totals");
-  if (state.battles > 0){
+  if (state.mode === "classic" && state.battles > 0){
     totalsEl.hidden = false;
     const title = state.battles === 1
       ? t("totals.title.one")
@@ -966,6 +1299,7 @@ function renderLog(){
 }
 
 /* ---------- MODALES ---------- */
+const modeModal = document.getElementById("modeModal");
 const helpModal = document.getElementById("helpModal");
 const confirmModal = document.getElementById("confirmModal");
 const confirmTitleEl = document.getElementById("confirmTitle");
@@ -982,7 +1316,7 @@ function openModal(modal){
   activeModal = modal;
   modal.hidden = false;
   document.body.classList.add("modal-open");
-  const focusable = modal.querySelector(".modal-close, .modal-actions .btn");
+  const focusable = modal.querySelector(".mode-option, .modal-close, .modal-actions .btn");
   if (focusable) focusable.focus();
 }
 
@@ -993,6 +1327,12 @@ function closeModal(modal){
   document.body.classList.remove("modal-open");
   if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
   lastFocused = null;
+}
+
+function chooseMode(mode){
+  if (activeModal !== modeModal) return;
+  closeModal(modeModal);
+  setupBoard(mode);
 }
 
 function askConfirm(title, text, okLabel){
@@ -1011,6 +1351,8 @@ function settleConfirm(value){
   resolve(value);
 }
 
+document.getElementById("modeClassic").addEventListener("click", () => chooseMode("classic"));
+document.getElementById("modeKoom").addEventListener("click", () => chooseMode("koom"));
 document.getElementById("helpBtn").addEventListener("click", () => openModal(helpModal));
 document.getElementById("confirmOk").addEventListener("click", () => settleConfirm(true));
 document.getElementById("confirmCancel").addEventListener("click", () => settleConfirm(false));
@@ -1025,6 +1367,7 @@ document.querySelectorAll(".modal [data-close]").forEach(el => {
 
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape" || !activeModal) return;
+  if (activeModal === modeModal) return;   // la versión debe elegirse sí o sí
   if (activeModal === confirmModal) settleConfirm(false);
   else closeModal(activeModal);
 });
@@ -1036,8 +1379,8 @@ document.getElementById("langBtn").addEventListener("click", () => {
 
 document.getElementById("endTurnBtn").addEventListener("click", () => {
   if (state.over || animatingMove) return;
-  if (state.phase !== "capture") return;
-  if (state.mustCapture && state.captured === 0) return;
+  if (state.phase !== "capture" && state.phase !== "trample") return;
+  if (state.phase === "capture" && state.mustCapture && state.captured === 0) return;
   endTurn();
 });
 
@@ -1045,11 +1388,15 @@ document.getElementById("finalizeBtn").addEventListener("click", async () => {
   if (state.over || animatingMove) return;
   const ok = await askConfirm(
     t("confirm.finalize.title"),
-    t("confirm.finalize.text"),
+    t(state.mode === "koom" ? "confirm.finalize.koom.text" : "confirm.finalize.text"),
     t("btn.finalize")
   );
   if (!ok || state.over) return;
-  finishBattle(countType("dwarf"), countType("troll"));
+  if (state.mode === "koom"){
+    finishKoomBattle("draw");
+  } else {
+    finishBattle(countType("dwarf"), countType("troll"));
+  }
 });
 
 document.getElementById("newBattleBtn").addEventListener("click", async () => {
@@ -1062,7 +1409,7 @@ document.getElementById("newBattleBtn").addEventListener("click", async () => {
     );
     if (!ok) return;
   }
-  setupBoard();
+  setupBoard(state.mode);
 });
 
 /* ---------- ARRANQUE ---------- */
@@ -1083,7 +1430,8 @@ async function init(){
     return;
   }
   applyTranslations();
-  setupBoard();
+  setupBoard("classic");
+  openModal(modeModal);
 }
 
 init();

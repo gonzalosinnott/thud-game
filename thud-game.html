@@ -26,6 +26,8 @@
       <button id="newBattleBtn" class="btn new-battle" data-i18n="btn.newBattle">Nueva batalla</button>
     </div>
 
+    <div class="mode-badge" id="modeBadge"></div>
+
     <div class="turn dwarfs" id="turn">
       <span id="turnLabel">Turno de los Enanos</span>
       <button id="endTurnBtn" class="btn end-turn" data-i18n="btn.endTurn" hidden>Terminar turno</button>
@@ -50,17 +52,35 @@
     <div class="totals" id="totals" hidden></div>
 
     <div class="legend">
-      <div><span class="dot dwarf-dot"></span> <span data-i18n="legend.dwarf">Enano · 1 pt</span></div>
-      <div><span class="dot troll-dot"></span> <span data-i18n="legend.troll">Troll · 4 pts</span></div>
-      <div><span class="dot stone-dot"></span> <span data-i18n="legend.thudstone">Thudstone</span></div>
+      <div><span class="dot dwarf-dot"></span> <span id="legendDwarf" data-i18n="legend.dwarf">Enano · 1 pt</span></div>
+      <div><span class="dot troll-dot"></span> <span id="legendTroll" data-i18n="legend.troll">Troll · 4 pts</span></div>
+      <div><span class="dot stone-dot"></span> <span id="legendStone" data-i18n="legend.thudstone">Thudstone</span></div>
     </div>
+
+    <section class="log-wrap log-section" aria-label="Registro de la partida" data-i18n-aria="log.aria">
+      <h2 data-i18n="log.title">Registro</h2>
+      <ol id="log"></ol>
+    </section>
   </aside>
 </main>
 
-<section class="log-wrap log-section" aria-label="Registro de la partida" data-i18n-aria="log.aria">
-  <h2 data-i18n="log.title">Registro</h2>
-  <ol id="log"></ol>
-</section>
+<!-- Modal: elección de versión -->
+<div class="modal" id="modeModal" role="dialog" aria-modal="true" aria-labelledby="modeTitle" hidden>
+  <div class="modal-backdrop"></div>
+  <div class="modal-card mode-card">
+    <h2 id="modeTitle" data-i18n="mode.title">Elige un modo de juego</h2>
+    <div class="mode-options">
+      <button type="button" class="mode-option" id="modeClassic">
+        <span class="mode-name" data-i18n="mode.classic.name">Thud tradicional</span>
+        <span class="mode-desc" data-i18n="mode.classic.desc">32 enanos contra 8 trolls. Captura piezas y suma puntos por cada pieza no eliminada.</span>
+      </button>
+      <button type="button" class="mode-option" id="modeKoom">
+        <span class="mode-name" data-i18n="mode.koom.name">Valle de Koom</span>
+        <span class="mode-desc" data-i18n="mode.koom.desc">Para ganar, los enanos deben llevar la roca al otro lado del valle, hasta cualquiera de las cinco casillas del lado opuesto del tablero, contra el que está sentado el comandante enano. Para ganar, los trolls deben capturar la roca colocando tres trolls adyacentes a ella (en cualquier dirección, incluidas las diagonales). Si ningún bando puede alcanzar su objetivo, la partida termina en tablas.</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Cómo se juega -->
 <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
@@ -69,28 +89,56 @@
     <button type="button" class="modal-close" data-close data-i18n-aria="modal.close" aria-label="Cerrar">&times;</button>
     <h2 id="helpTitle" data-i18n="help.title">Cómo se juega</h2>
     <div class="modal-body">
-      <p data-i18n-html="help.objective"><b>Objetivo:</b> capturar el máximo de piezas rivales. Los enanos puntúan 1 por pieza viva; los trolls, 4.</p>
+      <div data-help-mode="classic">
+        <p data-i18n-html="help.objective"><b>Objetivo:</b> capturar el máximo de piezas rivales. Los enanos puntúan 1 por pieza viva; los trolls, 4.</p>
 
-      <h3 data-i18n-html="help.dwarfsTitle">Enanos <span>(mueven primero)</span></h3>
-      <ul>
-        <li data-i18n-html="help.dwarfsMove"><b>Mover:</b> como una dama de ajedrez, a casillas vacías, sin saltar piezas.</li>
-        <li data-i18n-html="help.dwarfsHurl"><b>Lanzar:</b> en una línea recta de enanos adyacentes se lanza el enano frontal hasta tantas casillas como enanos tenga la línea. Debe caer sobre un troll para capturarlo.</li>
-      </ul>
+        <h3 data-i18n-html="help.dwarfsTitle">Enanos <span>(mueven primero)</span></h3>
+        <ul>
+          <li data-i18n-html="help.dwarfsMove"><b>Mover:</b> como una dama de ajedrez, a casillas vacías, sin saltar piezas.</li>
+          <li data-i18n-html="help.dwarfsHurl"><b>Lanzar:</b> en una línea recta de enanos adyacentes se lanza el enano frontal hasta tantas casillas como enanos tenga la línea. Debe caer sobre un troll para capturarlo.</li>
+        </ul>
 
-      <h3 data-i18n="help.trollsTitle">Trolls</h3>
-      <ul>
-        <li data-i18n-html="help.trollsMove"><b>Mover:</b> como un rey del ajedrez, una casilla a una casilla vacía. Después puede capturar enanos adyacentes (opcional).</li>
-        <li data-i18n-html="help.trollsShove"><b>Empujar:</b> una línea de trolls adyacentes empuja al troll del extremo hasta tantas casillas como trolls tenga la línea, sin ocupar casillas. Debe capturar al menos un enano adyacente al destino.</li>
-      </ul>
+        <h3 data-i18n="help.trollsTitle">Trolls</h3>
+        <ul>
+          <li data-i18n-html="help.trollsMove"><b>Mover:</b> como un rey del ajedrez, una casilla a una casilla vacía. Después puede capturar enanos adyacentes (opcional).</li>
+          <li data-i18n-html="help.trollsShove"><b>Empujar:</b> una línea de trolls adyacentes empuja al troll del extremo hasta tantas casillas como trolls tenga la línea, sin ocupar casillas. Debe capturar al menos un enano adyacente al destino.</li>
+        </ul>
 
-      <h3 data-i18n="help.controlsTitle">Controles</h3>
-      <ul>
-        <li data-i18n="help.controls1">Haz clic o arrastra una pieza propia para ver sus destinos posibles.</li>
-        <li data-i18n="help.controls2">Haz clic en un destino resaltado, o suelta la pieza sobre él, para ejecutar la jugada.</li>
-        <li data-i18n="help.controls3">Vuelve a hacer clic en la pieza seleccionada para deseleccionarla.</li>
-      </ul>
+        <h3 data-i18n="help.controlsTitle">Controles</h3>
+        <ul>
+          <li data-i18n="help.controls1">Haz clic o arrastra una pieza propia para ver sus destinos posibles.</li>
+          <li data-i18n="help.controls2">Haz clic en un destino resaltado, o suelta la pieza sobre él, para ejecutar la jugada.</li>
+          <li data-i18n="help.controls3">Vuelve a hacer clic en la pieza seleccionada para deseleccionarla.</li>
+        </ul>
 
-      <p data-i18n-html="help.end"><b>Fin:</b> la batalla acaba cuando un bando se queda sin jugadas legales (o ambos acuerdan que no hay más capturas). Se comparan los puntos.</p>
+        <p data-i18n-html="help.end"><b>Fin:</b> la batalla acaba cuando un bando se queda sin jugadas legales (o ambos acuerdan que no hay más capturas). Se comparan los puntos.</p>
+      </div>
+
+      <div data-help-mode="koom" hidden>
+        <p data-i18n-html="help.koom.objective"><b>Objetivo:</b> los enanos deben llevar la roca a una de las cinco casillas doradas del lado opuesto. Los trolls ganan si tres trolls quedan adyacentes a la roca.</p>
+
+        <h3 data-i18n-html="help.koom.dwarfsTitle">Enanos <span>(mueven primero)</span></h3>
+        <ul>
+          <li data-i18n-html="help.koom.dwarfsMove"><b>Mover:</b> como una dama de ajedrez, a casillas vacías, sin saltar piezas.</li>
+          <li data-i18n-html="help.koom.rock"><b>Mover la roca:</b> una casilla en cualquier dirección. La roca debe empezar y terminar junto a un enano.</li>
+          <li data-i18n-html="help.koom.trap"><b>Capturar:</b> al mover un enano, captura los trolls que queden atrapados entre ese enano y otro enano en línea recta.</li>
+        </ul>
+
+        <h3 data-i18n="help.koom.trollsTitle">Trolls</h3>
+        <ul>
+          <li data-i18n-html="help.koom.trollsMove"><b>Mover:</b> hasta tres casillas en línea recta, sin saltar piezas.</li>
+          <li data-i18n-html="help.koom.trample"><b>Pisotear:</b> salta sobre un enano adyacente y aterriza en la casilla vacía inmediatamente posterior. Puede encadenar varios pisotones cambiando de dirección.</li>
+        </ul>
+
+        <h3 data-i18n="help.controlsTitle">Controles</h3>
+        <ul>
+          <li data-i18n="help.controls1">Haz clic o arrastra una pieza propia para ver sus destinos posibles.</li>
+          <li data-i18n="help.controls2">Haz clic en un destino resaltado, o suelta la pieza sobre él, para ejecutar la jugada.</li>
+          <li data-i18n="help.controls3">Vuelve a hacer clic en la pieza seleccionada para deseleccionarla.</li>
+        </ul>
+
+        <p data-i18n-html="help.koom.end"><b>Fin:</b> los enanos ganan si la roca llega a la fila dorada; los trolls, si rodean la roca con tres trolls. Si nadie alcanza su objetivo, es tablas.</p>
+      </div>
     </div>
   </div>
 </div>

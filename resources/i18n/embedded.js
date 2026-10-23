@@ -89,6 +89,52 @@ help.controls3=Vuelve a hacer clic en la pieza seleccionada para deseleccionarla
 help.end=<b>Fin:</b> la batalla acaba cuando un bando se queda sin jugadas legales (o ambos acuerdan que no hay más capturas). Se comparan los puntos.
 
 modal.close=Cerrar
+
+# ---------------------------------------------------------------
+# Selección de versión y Valle de Koom
+# ---------------------------------------------------------------
+mode.title=Elige un modo de juego
+mode.classic.name=Thud tradicional
+mode.classic.desc=32 enanos contra 8 trolls. Captura piezas y suma puntos por cada pieza no eliminada.
+mode.koom.name=Valle de Koom
+mode.koom.desc=Para ganar, los enanos deben llevar la roca al otro lado del valle, hasta cualquiera de las cinco casillas del lado opuesto del tablero, contra el que está sentado el comandante enano. Para ganar, los trolls deben capturar la roca colocando tres trolls adyacentes a ella (en cualquier dirección, incluidas las diagonales). Si ningún bando puede alcanzar su objetivo, la partida termina en tablas.
+
+legend.dwarf.koom=Enano
+legend.troll.koom=Troll
+legend.rock=Roca
+
+status.koomSelectDwarf=Lleva la roca a la fila dorada. Selecciona un enano o la roca.
+status.koomSelectTroll=Rodea la roca con tres trolls. Selecciona un troll para mover o pisotear.
+status.koomTrample=Puedes seguir pisoteando enanos o terminar el turno.
+status.koomRockSelected=Roca seleccionada: debe terminar junto a un enano.
+status.tramples.one={n} pisotón posible.
+status.tramples.other={n} pisotones posibles.
+
+confirm.finalize.koom.text=¿Finalizar la batalla? Si no se alcanzó ningún objetivo, se declararán tablas.
+
+result.koom.dwarfs=<strong>Victoria de los Enanos</strong><br>La roca llegó a la fila dorada del valle.
+result.koom.trolls=<strong>Victoria de los Trolls</strong><br>Tres trolls rodearon la roca.
+result.koom.draw=<strong>Tablas</strong><br>Ningún bando alcanzó su objetivo.
+
+log.koomStart=Comienza la batalla por el Valle de Koom. Los enanos mueven primero.
+log.koomRock=La roca se mueve de {from} a {to}.
+log.koomTrap=Enano atrapa un troll en {cell}.
+log.koomTrample=Troll pisotea un enano en {cell} ({from} → {to}).
+log.koomPassDwarfs=Los enanos no tienen jugadas y pasan.
+log.koomPassTrolls=Los trolls no tienen jugadas y pasan.
+log.koomEndDwarfs=Fin de la batalla: victoria de los enanos. La roca llegó al otro lado.
+log.koomEndTrolls=Fin de la batalla: victoria de los trolls. La roca quedó rodeada.
+log.koomDraw=Fin de la batalla: tablas.
+
+help.koom.objective=<b>Objetivo:</b> los enanos deben llevar la roca a una de las cinco casillas doradas del lado opuesto. Los trolls ganan si tres trolls quedan adyacentes a la roca.
+help.koom.dwarfsTitle=Enanos <span>(mueven primero)</span>
+help.koom.dwarfsMove=<b>Mover:</b> como una dama de ajedrez, a casillas vacías, sin saltar piezas.
+help.koom.rock=<b>Mover la roca:</b> una casilla en cualquier dirección. La roca debe empezar y terminar junto a un enano.
+help.koom.trap=<b>Capturar:</b> al mover un enano, captura los trolls que queden atrapados entre ese enano y otro enano en línea recta.
+help.koom.trollsTitle=Trolls
+help.koom.trollsMove=<b>Mover:</b> hasta tres casillas en línea recta, sin saltar piezas.
+help.koom.trample=<b>Pisotear:</b> salta sobre un enano adyacente y aterriza en la casilla vacía inmediatamente posterior. Puede encadenar varios pisotones cambiando de dirección.
+help.koom.end=<b>Fin:</b> los enanos ganan si la roca llega a la fila dorada; los trolls, si rodean la roca con tres trolls. Si nadie alcanza su objetivo, es tablas.
 `,
   en: `# ---------------------------------------------------------------
 # Thud — English translations
@@ -177,5 +223,51 @@ help.controls3=Click the selected piece again to deselect it.
 help.end=<b>End:</b> the battle ends when one side has no legal moves left (or both agree that no more captures are possible). Points are then compared.
 
 modal.close=Close
+
+# ---------------------------------------------------------------
+# Version selection and Koom Valley
+# ---------------------------------------------------------------
+mode.title=Choose a game mode
+mode.classic.name=Classic Thud
+mode.classic.desc=32 dwarfs against 8 trolls. Capture pieces and score points for each surviving piece.
+mode.koom.name=Koom Valley
+mode.koom.desc=For the dwarfs to win they must move the rock to the far side of the valley - onto any of the five squares on the opposite side of the board against which the dwarf commander is sitting. For the trolls to win they must capture the rock by placing three trolls adjacent to it (in any direction including diagonally). If neither side can achieve their objective the game is drawn.
+
+legend.dwarf.koom=Dwarf
+legend.troll.koom=Troll
+legend.rock=Rock
+
+status.koomSelectDwarf=Take the rock to the golden row. Select a dwarf or the rock.
+status.koomSelectTroll=Surround the rock with three trolls. Select a troll to move or trample.
+status.koomTrample=You may keep trampling dwarfs or end the turn.
+status.koomRockSelected=Rock selected: it must end next to a dwarf.
+status.tramples.one={n} trample available.
+status.tramples.other={n} tramples available.
+
+confirm.finalize.koom.text=Finish the battle? If neither objective was reached, it will be a draw.
+
+result.koom.dwarfs=<strong>Dwarfs win</strong><br>The rock reached the golden row of the valley.
+result.koom.trolls=<strong>Trolls win</strong><br>Three trolls surrounded the rock.
+result.koom.draw=<strong>Draw</strong><br>Neither side reached its objective.
+
+log.koomStart=The battle for Koom Valley begins. Dwarfs move first.
+log.koomRock=The rock moves from {from} to {to}.
+log.koomTrap=A dwarf traps a troll at {cell}.
+log.koomTrample=A troll tramples a dwarf at {cell} ({from} → {to}).
+log.koomPassDwarfs=Dwarfs have no legal moves and pass.
+log.koomPassTrolls=Trolls have no legal moves and pass.
+log.koomEndDwarfs=Battle over: dwarfs win. The rock reached the far side.
+log.koomEndTrolls=Battle over: trolls win. The rock was surrounded.
+log.koomDraw=Battle over: draw.
+
+help.koom.objective=<b>Objective:</b> the dwarfs must take the rock to one of the five golden squares on the opposite side. The trolls win if three trolls end up adjacent to the rock.
+help.koom.dwarfsTitle=Dwarfs <span>(move first)</span>
+help.koom.dwarfsMove=<b>Move:</b> like a chess queen, to empty squares, without jumping over pieces.
+help.koom.rock=<b>Move the rock:</b> one square in any direction. The rock must start and end next to a dwarf.
+help.koom.trap=<b>Capture:</b> when a dwarf moves, it captures trolls trapped between that dwarf and another dwarf in a straight line.
+help.koom.trollsTitle=Trolls
+help.koom.trollsMove=<b>Move:</b> up to three squares in a straight line, without jumping over pieces.
+help.koom.trample=<b>Trample:</b> jump over an adjacent dwarf and land on the empty square immediately beyond. You may chain several tramples, changing direction between them.
+help.koom.end=<b>End:</b> dwarfs win if the rock reaches the golden row; trolls win if they surround the rock with three trolls. If neither objective is reached, it is a draw.
 `
 };
