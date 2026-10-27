@@ -1,6 +1,6 @@
 /* Turnos, fin de batalla y resultados */
 
-import { N, state, countType } from "./core.js";
+import { N, state, countType, notifyGameState } from "./core.js";
 import { t } from "./i18n.js";
 import { render } from "./board.js";
 import { dwarfTargets, trollTargets } from "./movement.js";
@@ -9,6 +9,14 @@ import { resultVerdict } from "./verdict.js";
 
 /* ---------- TURNOS Y FIN DE BATALLA ---------- */
 export function endTurn(){
+  if (state.mode === "koom"){
+    const winner = koomEliminationWinner();
+    if (winner){
+      finishKoomBattle(winner, "elimination");
+      return;
+    }
+  }
+
   state.phase = "normal";
   state.selected = null;
   state.targets = [];
@@ -40,6 +48,16 @@ export function endTurn(){
 
   log(state.turn === "dwarfs" ? "log.turnDwarfs" : "log.turnTrolls");
   updateUI();
+  notifyGameState();
+}
+
+function koomEliminationWinner(){
+  const dwarfs = countType("dwarf");
+  const trolls = countType("troll");
+  if (dwarfs === 0 && trolls === 0) return "draw";
+  if (trolls === 0) return "dwarfs";
+  if (dwarfs === 0) return "trolls";
+  return null;
 }
 
 function hasAnyMove(player){
@@ -58,6 +76,11 @@ function checkBattleOver(){
   if (state.over) return true;
 
   if (state.mode === "koom"){
+    const winner = koomEliminationWinner();
+    if (winner){
+      finishKoomBattle(winner, "elimination");
+      return true;
+    }
     if (!hasAnyMove("dwarfs") && !hasAnyMove("trolls")){
       finishKoomBattle("draw");
       return true;
@@ -79,7 +102,11 @@ export function renderResult(dwarfs, trolls, verdict){
   result.hidden = false;
 
   if (state.mode === "koom"){
-    result.innerHTML = t("result.koom." + (state.koomWinner || "draw"));
+    const winner = state.koomWinner || "draw";
+    const suffix = winner !== "draw" && state.koomReason === "elimination"
+      ? ".elimination"
+      : "";
+    result.innerHTML = t("result.koom." + winner + suffix);
     return;
   }
 
@@ -113,12 +140,23 @@ export function finishBattle(dwarfs, trolls){
 
   render();
   updateUI();
+  notifyGameState();
 }
 
-export function finishKoomBattle(winner){
+export function finishKoomBattle(winner, reason = "objective"){
   if (state.over) return;
+
+  if (winner === "draw"){
+    const elimination = koomEliminationWinner();
+    if (elimination && elimination !== "draw"){
+      winner = elimination;
+      reason = "elimination";
+    }
+  }
+
   state.over = true;
   state.koomWinner = winner;
+  state.koomReason = winner === "draw" ? null : reason;
   state.phase = "normal";
   state.selected = null;
   state.targets = [];
@@ -126,15 +164,16 @@ export function finishKoomBattle(winner){
   state.mustCapture = false;
   state.captured = 0;
 
-  log(
-    winner === "dwarfs" ? "log.koomEndDwarfs" :
-    winner === "trolls" ? "log.koomEndTrolls" :
-    "log.koomDraw",
-    null,
-    true
-  );
+  let logKey = "log.koomDraw";
+  if (winner === "dwarfs"){
+    logKey = reason === "elimination" ? "log.koomEndDwarfsElimination" : "log.koomEndDwarfs";
+  } else if (winner === "trolls"){
+    logKey = reason === "elimination" ? "log.koomEndTrollsElimination" : "log.koomEndTrolls";
+  }
+  log(logKey, null, true);
 
   renderResult(countType("dwarf"), countType("troll"));
   render();
   updateUI();
+  notifyGameState();
 }

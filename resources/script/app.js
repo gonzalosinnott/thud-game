@@ -1,6 +1,6 @@
 /* Eventos y arranque de la aplicacion */
 
-import { state, boardEl, countType } from "./core.js";
+import { state, boardEl, countType, GAME_STATE_EVENT, isAiTurn } from "./core.js";
 import {
   LANGUAGE_CHANGE_EVENT,
   applyTranslations,
@@ -25,19 +25,29 @@ import { renderLog, updateUI } from "./ui.js";
 import {
   activeModal,
   askConfirm,
-  chooseMode,
   closeModal,
   confirmModal,
   helpModal,
   modeModal,
   openModal,
-  settleConfirm
+  openModeModal,
+  selectMode,
+  selectOpponent,
+  selectSide,
+  settleConfirm,
+  startSelectedGame
 } from "./modals.js";
+import { scheduleAiTurn } from "./ai/index.js";
 import { setupBoard } from "./setup.js";
 
 export function bindEvents(){
-  document.getElementById("modeClassic").addEventListener("click", () => chooseMode("classic"));
-  document.getElementById("modeKoom").addEventListener("click", () => chooseMode("koom"));
+  document.getElementById("modeClassic").addEventListener("click", () => selectMode("classic"));
+  document.getElementById("modeKoom").addEventListener("click", () => selectMode("koom"));
+  document.getElementById("opponentHuman").addEventListener("click", () => selectOpponent("human"));
+  document.getElementById("opponentAi").addEventListener("click", () => selectOpponent("ai"));
+  document.getElementById("sideDwarfs").addEventListener("click", () => selectSide("dwarfs"));
+  document.getElementById("sideTrolls").addEventListener("click", () => selectSide("trolls"));
+  document.getElementById("startGameBtn").addEventListener("click", () => startSelectedGame());
   document.getElementById("helpBtn").addEventListener("click", () => openModal(helpModal));
   document.getElementById("confirmOk").addEventListener("click", () => settleConfirm(true));
   document.getElementById("confirmCancel").addEventListener("click", () => settleConfirm(false));
@@ -63,20 +73,24 @@ export function bindEvents(){
     if (state.over) renderResult(countType("dwarf"), countType("troll"));
   });
 
+  document.addEventListener(GAME_STATE_EVENT, () => {
+    scheduleAiTurn();
+  });
+
   /* ---------- BOTONES ---------- */
   document.getElementById("langBtn").addEventListener("click", () => {
     switchLanguage(currentLang === "es" ? "en" : "es");
   });
 
   document.getElementById("endTurnBtn").addEventListener("click", () => {
-    if (state.over || animatingMove) return;
+    if (state.over || animatingMove || isAiTurn()) return;
     if (state.phase !== "capture" && state.phase !== "trample") return;
     if (state.phase === "capture" && state.mustCapture && state.captured === 0) return;
     endTurn();
   });
 
   document.getElementById("finalizeBtn").addEventListener("click", async () => {
-    if (state.over || animatingMove) return;
+    if (state.over || animatingMove || isAiTurn()) return;
     const ok = await askConfirm(
       t("confirm.finalize.title"),
       t(state.mode === "koom" ? "confirm.finalize.koom.text" : "confirm.finalize.text"),
@@ -100,7 +114,7 @@ export function bindEvents(){
       );
       if (!ok) return;
     }
-    openModal(modeModal);
+    openModeModal();
   });
 }
 
@@ -128,5 +142,5 @@ export async function init(){
   }
   applyTranslations();
   setupBoard("classic");
-  openModal(modeModal);
+  openModeModal();
 }

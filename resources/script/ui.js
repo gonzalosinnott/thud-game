@@ -1,6 +1,6 @@
 /* Interfaz: panel, estado y registro de la partida */
 
-import { state, countType } from "./core.js";
+import { state, countType, isAiTurn } from "./core.js";
 import { t } from "./i18n.js";
 import { resultVerdict } from "./verdict.js";
 
@@ -20,6 +20,19 @@ export function updateUI(){
   document.getElementById("modeBadge").textContent =
     t(state.mode === "koom" ? "mode.koom.name" : "mode.classic.name");
 
+  const matchupEl = document.getElementById("matchupBadge");
+  if (matchupEl){
+    if (state.ai.enabled && state.ai.humanSide && state.ai.side){
+      matchupEl.hidden = false;
+      matchupEl.textContent = t("matchup.ai", {
+        human: t(state.ai.humanSide === "dwarfs" ? "side.dwarfs" : "side.trolls"),
+        ai: t(state.ai.side === "dwarfs" ? "side.dwarfs" : "side.trolls")
+      });
+    } else {
+      matchupEl.hidden = true;
+    }
+  }
+
   document.getElementById("legendDwarf").textContent =
     t(state.mode === "koom" ? "legend.dwarf.koom" : "legend.dwarf");
   document.getElementById("legendTroll").textContent =
@@ -38,6 +51,8 @@ export function updateUI(){
   const statusEl = document.getElementById("status");
   if (state.over){
     statusEl.textContent = t("status.over");
+  } else if (isAiTurn()){
+    statusEl.textContent = t(state.ai.thinking ? "status.aiThinking" : "status.aiTurn");
   } else if (state.phase === "capture"){
     statusEl.textContent = (state.mustCapture && state.captured === 0)
       ? t("status.shoveRequired")
@@ -78,15 +93,18 @@ export function updateUI(){
   }
 
   const btn = document.getElementById("endTurnBtn");
-  const show = (state.phase === "capture" || state.phase === "trample") && !state.over;
+  const aiTurn = isAiTurn();
+  const show = (state.phase === "capture" || state.phase === "trample") && !state.over && !aiTurn;
   const mustCaptureNow = state.phase === "capture" && state.mustCapture && state.captured === 0;
   btn.hidden = !show;
-  btn.disabled = mustCaptureNow;
+  btn.disabled = mustCaptureNow || aiTurn;
   btn.textContent = mustCaptureNow ? t("btn.captureRequired") : t("btn.endTurn");
   turnEl.classList.toggle("has-action", show);
   document.getElementById("turnLabel").hidden = show;
 
-  document.getElementById("finalizeBtn").hidden = state.over;
+  const finalizeBtn = document.getElementById("finalizeBtn");
+  finalizeBtn.hidden = state.over;
+  finalizeBtn.disabled = aiTurn;
 }
 
 export function log(key, params, highlight){

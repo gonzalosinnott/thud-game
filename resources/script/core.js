@@ -21,6 +21,9 @@ export function isPerimeter(r, c){
 export const empty = () => ({ type:null, owner:null });
 export const key = (r, c) => r + "," + c;
 export const coord = p => String.fromCharCode(65 + p.c) + (p.r + 1);
+export const otherSide = side => side === "dwarfs" ? "trolls" : "dwarfs";
+
+export const GAME_STATE_EVENT = "thud:gamestate";
 
 export const state = {
   mode: "classic",        // classic | koom
@@ -34,8 +37,23 @@ export const state = {
   captured: 0,
   over: false,
   koomWinner: null,       // dwarfs | trolls | draw
+  koomReason: null,       // objective | elimination
+  ai: {
+    enabled: false,
+    side: null,           // bando controlado por la maquina
+    humanSide: null,      // bando elegido por la persona
+    thinking: false
+  },
   log: []
 };
+
+export function isAiTurn(){
+  return !!state.ai.enabled && state.ai.side === state.turn;
+}
+
+export function notifyGameState(){
+  document.dispatchEvent(new CustomEvent(GAME_STATE_EVENT));
+}
 
 export function countType(type){
   let n = 0;

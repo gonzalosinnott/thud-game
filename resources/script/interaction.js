@@ -1,6 +1,6 @@
 /* Interaccion: seleccion, clics y arrastre de piezas */
 
-import { state, key, cells, playSound, stopSound } from "./core.js";
+import { state, key, cells, playSound, stopSound, isAiTurn } from "./core.js";
 import { pieceEl, render } from "./board.js";
 import { dwarfTargets, trollTargets } from "./movement.js";
 import { doCapture } from "./moves.js";
@@ -18,8 +18,9 @@ function selectPiece(r, c){
   updateUI();
 }
 
-export function onCellClick(r, c){
+export function onCellClick(r, c, fromAi = false){
   if (state.over || animatingMove) return;
+  if (!fromAi && isAiTurn()) return;
 
   // Fase de captura de los trolls: clic en enanos adyacentes para eliminarlos
   if (state.phase === "capture"){
@@ -88,7 +89,7 @@ function targetAt(x, y){
 
 export function onPointerDown(e){
   if (e.button !== 0 || e.pointerType === "touch") return;
-  if (state.over || animatingMove || state.phase !== "normal") return;
+  if (state.over || animatingMove || isAiTurn() || state.phase !== "normal") return;
 
   const cell = e.target.closest(".cell");
   if (!cell) return;

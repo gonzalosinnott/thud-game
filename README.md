@@ -34,8 +34,24 @@ También se puede abrir `thud-game.html` con doble clic. En ese caso `main.js` c
 - `turns.js`: turnos y fin de batalla.
 - `verdict.js`: veredicto de la batalla clásica.
 - `ui.js`: panel y registro.
-- `modals.js`: modales.
+- `modals.js`: modales, incluida la elección de modo, oponente y bando.
 - `app.js`: eventos e inicialización.
+- `ai/rules.js`: simulación de jugadas sobre una copia de la partida.
+- `ai/evaluate.js`: evaluación heurística de posiciones.
+- `ai/choose.js`: elección de la mejor jugada.
+- `ai/index.js`: orquestación del turno de la máquina.
+
+## Modos y oponente
+
+Al abrir la página se elige la versión (Thud tradicional o Valle de Koom) y el
+oponente. Contra la máquina también se elige si la persona juega con enanos o
+con trolls; la máquina toma el bando contrario. La selección vale solo para la
+partida actual y se vuelve a pedir en cada recarga. “Nueva batalla” vuelve a
+abrir esta selección y pide confirmación si hay una partida en curso.
+
+En el Valle de Koom, además de los objetivos con la roca, gana el bando que
+elimine por completo al rival: los enanos ganan si no queda ningún troll y los
+trolls ganan si no queda ningún enano.
 
 ## Estilos
 

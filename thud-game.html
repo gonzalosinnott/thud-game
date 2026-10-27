@@ -23,6 +23,7 @@
 
   <aside class="panel">
     <div class="mode-badge" id="modeBadge"></div>
+    <div class="matchup-badge" id="matchupBadge" hidden></div>
 
     <div class="actions">
       <button id="finalizeBtn" class="btn finalize" data-i18n="btn.finalize">Finalizar batalla</button>
@@ -63,20 +64,44 @@
   </aside>
 </main>
 
-<!-- Modal: elección de versión -->
+<!-- Modal: elección de versión, oponente y bando -->
 <div class="modal" id="modeModal" role="dialog" aria-modal="true" aria-labelledby="modeTitle" hidden>
   <div class="modal-backdrop"></div>
   <div class="modal-card mode-card">
     <h2 id="modeTitle" data-i18n="mode.title">Elige un modo de juego</h2>
-    <div class="mode-options">
-      <button type="button" class="mode-option" id="modeClassic">
-        <span class="mode-name" data-i18n="mode.classic.name">Thud tradicional</span>
-        <span class="mode-desc" data-i18n="mode.classic.desc">32 enanos contra 8 trolls. Captura piezas y suma puntos por cada pieza no eliminada.</span>
-      </button>
-      <button type="button" class="mode-option" id="modeKoom">
-        <span class="mode-name" data-i18n="mode.koom.name">Valle de Koom</span>
-        <span class="mode-desc" data-i18n="mode.koom.desc">Para ganar, los enanos deben llevar la roca al otro lado del valle, hasta cualquiera de las cinco casillas del lado opuesto del tablero, contra el que está sentado el comandante enano. Para ganar, los trolls deben capturar la roca colocando tres trolls adyacentes a ella (en cualquier dirección, incluidas las diagonales). Si ningún bando puede alcanzar su objetivo, la partida termina en empate.</span>
-      </button>
+
+    <section class="mode-section">
+      <h3 class="mode-section-title" data-i18n="mode.version">Versión</h3>
+      <div class="mode-options">
+        <button type="button" class="mode-option" id="modeClassic" aria-pressed="false">
+          <span class="mode-name" data-i18n="mode.classic.name">Thud tradicional</span>
+          <span class="mode-desc" data-i18n="mode.classic.desc">32 enanos contra 8 trolls. Captura piezas y suma puntos por cada pieza no eliminada.</span>
+        </button>
+        <button type="button" class="mode-option" id="modeKoom" aria-pressed="false">
+          <span class="mode-name" data-i18n="mode.koom.name">Valle de Koom</span>
+          <span class="mode-desc" data-i18n="mode.koom.desc">Para ganar, los enanos deben llevar la roca al otro lado del valle, hasta cualquiera de las cinco casillas del lado opuesto del tablero, contra el que está sentado el comandante enano. Para ganar, los trolls deben capturar la roca colocando tres trolls adyacentes a ella (en cualquier dirección, incluidas las diagonales). Si ningún bando puede alcanzar su objetivo, la partida termina en empate.</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="mode-section">
+      <h3 class="mode-section-title" data-i18n="mode.opponent">Oponente</h3>
+      <div class="choice-row">
+        <button type="button" class="choice-btn" id="opponentHuman" data-i18n="mode.opponent.human" aria-pressed="false">Otro humano</button>
+        <button type="button" class="choice-btn" id="opponentAi" data-i18n="mode.opponent.ai" aria-pressed="false">Máquina</button>
+      </div>
+    </section>
+
+    <section class="mode-section" id="sideSection" hidden>
+      <h3 class="mode-section-title" data-i18n="mode.side">Jugás como</h3>
+      <div class="choice-row">
+        <button type="button" class="choice-btn" id="sideDwarfs" data-i18n="mode.side.dwarfs" aria-pressed="false">Enanos</button>
+        <button type="button" class="choice-btn" id="sideTrolls" data-i18n="mode.side.trolls" aria-pressed="false">Trolls</button>
+      </div>
+    </section>
+
+    <div class="modal-actions mode-actions">
+      <button type="button" class="btn primary" id="startGameBtn" data-i18n="mode.start">Comenzar batalla</button>
     </div>
   </div>
 </div>

@@ -18,12 +18,34 @@ const order = [
   "turns.js",
   "moves.js",
   "animation.js",
-  "setup.js",
   "interaction.js",
+  "ai/evaluate.js",
+  "ai/rules.js",
+  "ai/choose.js",
+  "ai/index.js",
+  "setup.js",
   "modals.js",
   "app.js",
   "module.js"
 ];
+
+// El bundle comparte un unico ámbito, así que dos módulos no pueden declarar
+// el mismo símbolo en el nivel superior.
+const declared = new Map();
+for (const name of order){
+  const source = readFileSync(join(here, name), "utf8");
+  const pattern = /^(?:export\s+)?(?:async\s+)?(?:function|const|let|var)\s+([A-Za-z_$][\w$]*)/gm;
+  for (const match of source.matchAll(pattern)){
+    const symbol = match[1];
+    if (declared.has(symbol)){
+      throw new Error(
+        `Colisión de símbolos en el bundle: "${symbol}" está en ` +
+        `${declared.get(symbol)} y en ${name}`
+      );
+    }
+    declared.set(symbol, name);
+  }
+}
 
 function stripModuleSyntax(source){
   return source

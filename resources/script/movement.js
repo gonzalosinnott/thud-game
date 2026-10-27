@@ -4,27 +4,27 @@ import { N, DIRS, inBoard, empty, key, coord, state } from "./core.js";
 import { log } from "./ui.js";
 
 /* ---------- MOVIMIENTOS POSIBLES ---------- */
-export function dwarfTargets(r, c){
-  if (state.mode === "koom"){
-    const p = state.board[r][c];
-    if (p && p.type === "thudstone") return rockTargets(r, c);
-    return dwarfTargetsKoom(r, c);
+export function dwarfTargets(r, c, game = state){
+  if (game.mode === "koom"){
+    const p = game.board[r][c];
+    if (p && p.type === "thudstone") return rockTargets(r, c, game);
+    return dwarfTargetsKoom(r, c, game);
   }
-  return dwarfTargetsClassic(r, c);
+  return dwarfTargetsClassic(r, c, game);
 }
 
-export function trollTargets(r, c){
-  return state.mode === "koom" ? trollTargetsKoom(r, c) : trollTargetsClassic(r, c);
+export function trollTargets(r, c, game = state){
+  return game.mode === "koom" ? trollTargetsKoom(r, c, game) : trollTargetsClassic(r, c, game);
 }
 
-function dwarfTargetsClassic(r, c){
+function dwarfTargetsClassic(r, c, game){
   const out = [];
 
   // Mover como dama: solo a casillas vacías (no captura al mover)
   for (const [dr, dc] of DIRS){
     let rr = r + dr, cc = c + dc;
     while (inBoard(rr, cc)){
-      if (state.board[rr][cc].type) break;
+      if (game.board[rr][cc].type) break;
       out.push({ r:rr, c:cc, kind:"move" });
       rr += dr; cc += dc;
     }
@@ -36,13 +36,13 @@ function dwarfTargetsClassic(r, c){
     let fd = 0;
     while (true){
       const rr = r + (fd + 1) * dr, cc = c + (fd + 1) * dc;
-      if (!inBoard(rr, cc) || state.board[rr][cc].type !== "dwarf") break;
+      if (!inBoard(rr, cc) || game.board[rr][cc].type !== "dwarf") break;
       fd++;
     }
     let bd = 0;
     while (true){
       const rr = r - (bd + 1) * dr, cc = c - (bd + 1) * dc;
-      if (!inBoard(rr, cc) || state.board[rr][cc].type !== "dwarf") break;
+      if (!inBoard(rr, cc) || game.board[rr][cc].type !== "dwarf") break;
       bd++;
     }
     const line = fd + bd + 1;
@@ -50,7 +50,7 @@ function dwarfTargetsClassic(r, c){
     for (let k = 1; k <= line; k++){
       const rr = lr + k * dr, cc = lc + k * dc;
       if (!inBoard(rr, cc)) break;
-      const cell = state.board[rr][cc];
+      const cell = game.board[rr][cc];
       if (!cell.type) continue;                  // casilla vacía: sigue volando
       if (cell.type === "troll"){
         out.push({ r:rr, c:cc, kind:"lanzar", from:{ r:lr, c:lc }, line });
@@ -61,13 +61,13 @@ function dwarfTargetsClassic(r, c){
   return out;
 }
 
-function trollTargetsClassic(r, c){
+function trollTargetsClassic(r, c, game){
   const out = [];
 
   // Mover como rey: una casilla, a casilla vacía
   for (const [dr, dc] of DIRS){
     const rr = r + dr, cc = c + dc;
-    if (inBoard(rr, cc) && !state.board[rr][cc].type){
+    if (inBoard(rr, cc) && !game.board[rr][cc].type){
       out.push({ r:rr, c:cc, kind:"move" });
     }
   }
@@ -78,7 +78,7 @@ function trollTargetsClassic(r, c){
     let b = 0;
     while (true){
       const rr = r - (b + 1) * dr, cc = c - (b + 1) * dc;
-      if (!inBoard(rr, cc) || state.board[rr][cc].type !== "troll") break;
+      if (!inBoard(rr, cc) || game.board[rr][cc].type !== "troll") break;
       b++;
     }
     if (b < 1) continue;                         // hace falta una línea de trolls
@@ -86,9 +86,9 @@ function trollTargetsClassic(r, c){
     for (let k = 1; k <= line; k++){
       const rr = r + k * dr, cc = c + k * dc;
       if (!inBoard(rr, cc)) break;
-      if (state.board[rr][cc].type) break;       // no puede aterrizar sobre una pieza
+      if (game.board[rr][cc].type) break;        // no puede aterrizar sobre una pieza
       if (moveKeys.has(key(rr, cc))) continue;   // ya ofrecido como movimiento normal
-      const caps = adjacentDwarfs(rr, cc);
+      const caps = adjacentDwarfs(rr, cc, game);
       if (caps.length){
         out.push({ r:rr, c:cc, kind:"empujar", caps, line });
       }
@@ -98,12 +98,12 @@ function trollTargetsClassic(r, c){
 }
 
 /* Koom: los enanos mueven como dama, sin lanzar. */
-function dwarfTargetsKoom(r, c){
+function dwarfTargetsKoom(r, c, game){
   const out = [];
   for (const [dr, dc] of DIRS){
     let rr = r + dr, cc = c + dc;
     while (inBoard(rr, cc)){
-      if (state.board[rr][cc].type) break;
+      if (game.board[rr][cc].type) break;
       out.push({ r:rr, c:cc, kind:"move" });
       rr += dr; cc += dc;
     }
@@ -112,14 +112,14 @@ function dwarfTargetsKoom(r, c){
 }
 
 /* Koom: la roca se mueve una casilla y debe empezar y terminar junto a un enano. */
-function rockTargets(r, c){
+function rockTargets(r, c, game){
   const out = [];
-  if (!adjacentDwarfs(r, c).length) return out;
+  if (!adjacentDwarfs(r, c, game).length) return out;
 
   for (const [dr, dc] of DIRS){
     const rr = r + dr, cc = c + dc;
-    if (!inBoard(rr, cc) || state.board[rr][cc].type) continue;
-    if (adjacentDwarfs(rr, cc).length){
+    if (!inBoard(rr, cc) || game.board[rr][cc].type) continue;
+    if (adjacentDwarfs(rr, cc, game).length){
       out.push({ r:rr, c:cc, kind:"move" });
     }
   }
@@ -127,14 +127,14 @@ function rockTargets(r, c){
 }
 
 /* Koom: los trolls avanzan hasta 3 casillas o pisotean a un enano adyacente. */
-export function trollTargetsKoom(r, c){
+export function trollTargetsKoom(r, c, game = state){
   const out = [];
 
   for (const [dr, dc] of DIRS){
     for (let k = 1; k <= 3; k++){
       const rr = r + dr * k, cc = c + dc * k;
       if (!inBoard(rr, cc)) break;
-      if (state.board[rr][cc].type) break;
+      if (game.board[rr][cc].type) break;
       out.push({ r:rr, c:cc, kind:"move" });
     }
   }
@@ -143,7 +143,7 @@ export function trollTargetsKoom(r, c){
     const tr = r + dr, tc = c + dc;
     const lr = r + dr * 2, lc = c + dc * 2;
     if (!inBoard(tr, tc) || !inBoard(lr, lc)) continue;
-    if (state.board[tr][tc].type === "dwarf" && !state.board[lr][lc].type){
+    if (game.board[tr][tc].type === "dwarf" && !game.board[lr][lc].type){
       out.push({
         r:lr, c:lc, kind:"trample",
         captured:{ r:tr, c:tc }
@@ -153,62 +153,62 @@ export function trollTargetsKoom(r, c){
   return out;
 }
 
-function findRock(){
+export function findRock(game = state){
   for (let r = 0; r < N; r++){
     for (let c = 0; c < N; c++){
-      const p = state.board[r][c];
+      const p = game.board[r][c];
       if (p && p.type === "thudstone") return { r, c };
     }
   }
   return null;
 }
 
-export function rockOnGoal(){
-  const rock = findRock();
+export function rockOnGoal(game = state){
+  const rock = findRock(game);
   return !!rock && rock.r === 0 && rock.c >= 5 && rock.c <= 9;
 }
 
-export function trollsAdjacentToRock(){
-  const rock = findRock();
+export function trollsAdjacentToRock(game = state){
+  const rock = findRock(game);
   if (!rock) return 0;
   let n = 0;
   for (const [dr, dc] of DIRS){
     const rr = rock.r + dr, cc = rock.c + dc;
-    if (inBoard(rr, cc) && state.board[rr][cc].type === "troll") n++;
+    if (inBoard(rr, cc) && game.board[rr][cc].type === "troll") n++;
   }
   return n;
 }
 
 /* Koom: un troll queda atrapado si el enano movido y otro enano lo
    flanquean en línea recta (incluidas las diagonales). */
-function trappedTrollsFrom(pos){
+export function trappedTrollsFrom(pos, game = state){
   const out = [];
   for (const [dr, dc] of DIRS){
     const tr = pos.r + dr, tc = pos.c + dc;
     const br = pos.r + dr * 2, bc = pos.c + dc * 2;
     if (!inBoard(tr, tc) || !inBoard(br, bc)) continue;
-    if (state.board[tr][tc].type === "troll" &&
-        state.board[br][bc].type === "dwarf"){
+    if (game.board[tr][tc].type === "troll" &&
+        game.board[br][bc].type === "dwarf"){
       out.push({ r:tr, c:tc });
     }
   }
   return out;
 }
 
-export function captureTrappedTrolls(pos){
-  const trapped = trappedTrollsFrom(pos);
+export function captureTrappedTrolls(pos, game = state){
+  const trapped = trappedTrollsFrom(pos, game);
   for (const p of trapped){
-    state.board[p.r][p.c] = empty();
+    game.board[p.r][p.c] = empty();
     log("log.koomTrap", { cell: coord(p) }, true);
   }
   return trapped.length > 0;
 }
 
-export function adjacentDwarfs(r, c){
+export function adjacentDwarfs(r, c, game = state){
   const out = [];
   for (const [dr, dc] of DIRS){
     const rr = r + dr, cc = c + dc;
-    if (inBoard(rr, cc) && state.board[rr][cc].type === "dwarf"){
+    if (inBoard(rr, cc) && game.board[rr][cc].type === "dwarf"){
       out.push({ r:rr, c:cc });
     }
   }

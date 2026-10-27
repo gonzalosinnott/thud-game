@@ -94,7 +94,11 @@ function animateMove(tgt){
     moveAnimation = null;
     animatingMove = false;
     finishMove(tgt);
-  }).catch(() => { /* animación cancelada */ });
+  }).catch(err => {
+    if (!err || err.name !== "AbortError"){
+      console.error("Error al completar la animación:", err);
+    }
+  });
 
   return true;
 }

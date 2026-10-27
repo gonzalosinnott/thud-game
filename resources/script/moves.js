@@ -1,6 +1,6 @@
 /* Aplicacion de movimientos, capturas y pisotones */
 
-import { state, empty, coord, playSound } from "./core.js";
+import { state, empty, coord, playSound, notifyGameState } from "./core.js";
 import { render } from "./board.js";
 import { log, updateUI } from "./ui.js";
 import {
@@ -97,6 +97,7 @@ function applyKoomTarget(tgt, from){
       state.captureCells = [];
       render();
       updateUI();
+      notifyGameState();
     } else {
       endTurn();
     }
@@ -134,6 +135,7 @@ function startCapture(required, pos){
   }
   render();
   updateUI();
+  notifyGameState();
 }
 
 export function doCapture(r, c){
@@ -148,5 +150,6 @@ export function doCapture(r, c){
   } else {
     render();
     updateUI();
+    notifyGameState();
   }
 }

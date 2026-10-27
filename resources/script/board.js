@@ -1,6 +1,6 @@
 /* Tablero: creacion de casillas, piezas y renderizado */
 
-import { N, inBoard, state, boardEl, cells, key } from "./core.js";
+import { N, inBoard, state, boardEl, cells, key, isAiTurn } from "./core.js";
 
 export function pieceEl(p){
   const el = document.createElement("div");
@@ -53,7 +53,7 @@ export function render(){
       const p = state.board[r][c];
       if (p && p.type) el.appendChild(pieceEl(p));
 
-      const canDrag = !state.over && state.phase === "normal" &&
+      const canDrag = !state.over && !isAiTurn() && state.phase === "normal" &&
         p && (p.type !== "thudstone" || state.mode === "koom") &&
         p.owner === state.turn;
       if (canDrag) el.classList.add("draggable");

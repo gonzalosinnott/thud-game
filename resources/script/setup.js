@@ -1,12 +1,14 @@
 /* Preparacion de la partida y colocacion inicial de piezas */
 
-import { N, DIRS, inBoard, isPerimeter, empty, state } from "./core.js";
+import { N, DIRS, inBoard, isPerimeter, empty, state, notifyGameState } from "./core.js";
 import { cancelMoveAnimation } from "./animation.js";
+import { cancelAiTurn } from "./ai/index.js";
 import { render } from "./board.js";
 import { log, updateUI } from "./ui.js";
 
 /* ---------- PREPARACIÓN ---------- */
 export function setupBoard(mode = state.mode){
+  cancelAiTurn();
   cancelMoveAnimation();
   state.mode = mode === "koom" ? "koom" : "classic";
 
@@ -30,12 +32,14 @@ export function setupBoard(mode = state.mode){
   state.captured = 0;
   state.over = false;
   state.koomWinner = null;
+  state.koomReason = null;
   state.log = [];
   document.getElementById("result").hidden = true;
 
   log(state.mode === "koom" ? "log.koomStart" : "log.battleStart");
   render();
   updateUI();
+  notifyGameState();
 }
 
 function setupClassicPieces(){
