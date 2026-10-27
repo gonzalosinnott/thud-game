@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": false
+  },
+  "include": [
+    "resources/script/domain/**/*.js",
+    "resources/script/ai/**/*.js",
+    "resources/script/application/**/*.js",
+    "resources/script/presentation/**/*.js",
+    "resources/script/i18n/**/*.js",
+    "tests/**/*.js"
+  ],
+  "exclude": [
+    "resources/script/thud.bundle.js",
+    "resources/i18n/embedded.js"
+  ]
+}

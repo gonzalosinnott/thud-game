@@ -1,0 +1,15 @@
+{
+  "name": "thud-game",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Juego de Thud en HTML, CSS y JavaScript",
+  "scripts": {
+    "build": "node resources/i18n/generate-embedded.mjs && node resources/script/build-classic.mjs",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "check": "npm run test && npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

@@ -1,112 +1,102 @@
-/* Eventos y arranque de la aplicacion */
+/* Composición de la aplicación: eventos, modales e inicialización. */
 
-import { state, boardEl, countType, GAME_STATE_EVENT, isAiTurn } from "./core.js";
+import { MODES } from "./domain/constants.js";
+import { controller } from "./application/gameController.js";
+import { store } from "./application/store.js";
 import {
   LANGUAGE_CHANGE_EVENT,
   applyTranslations,
-  currentLang,
+  getLang,
   loadLocale,
   preferredLanguage,
   switchLanguage,
   t
-} from "./i18n.js";
-import { buildGrid } from "./board.js";
-import {
-  cancelDrag,
-  onCellClick,
-  onPointerCancel,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp
-} from "./interaction.js";
-import { animatingMove } from "./animation.js";
-import { endTurn, finishBattle, finishKoomBattle, renderResult } from "./turns.js";
-import { renderLog, updateUI } from "./ui.js";
+} from "./i18n/index.js";
+import { buildGrid } from "./presentation/boardView.js";
+import { bindInput } from "./presentation/input/index.js";
 import {
   activeModal,
   askConfirm,
   closeModal,
   confirmModal,
+  getSelection,
   helpModal,
   modeModal,
-  openModal,
   openModeModal,
+  openModal,
   selectMode,
   selectOpponent,
   selectSide,
-  settleConfirm,
-  startSelectedGame
-} from "./modals.js";
-import { scheduleAiTurn } from "./ai/index.js";
-import { setupBoard } from "./setup.js";
+  settleConfirm
+} from "./presentation/modals.js";
 
-export function bindEvents(){
-  document.getElementById("modeClassic").addEventListener("click", () => selectMode("classic"));
-  document.getElementById("modeKoom").addEventListener("click", () => selectMode("koom"));
+export function bindEvents() {
+  document.getElementById("modeClassic").addEventListener("click", () => selectMode(MODES.CLASSIC));
+  document.getElementById("modeKoom").addEventListener("click", () => selectMode(MODES.KOOM));
   document.getElementById("opponentHuman").addEventListener("click", () => selectOpponent("human"));
   document.getElementById("opponentAi").addEventListener("click", () => selectOpponent("ai"));
   document.getElementById("sideDwarfs").addEventListener("click", () => selectSide("dwarfs"));
   document.getElementById("sideTrolls").addEventListener("click", () => selectSide("trolls"));
-  document.getElementById("startGameBtn").addEventListener("click", () => startSelectedGame());
+
+  document.getElementById("startGameBtn").addEventListener("click", () => {
+    if (activeModal !== modeModal) return;
+    const selection = getSelection();
+    closeModal(modeModal);
+    controller.startGame({
+      mode: selection.mode,
+      opponent: selection.opponent,
+      humanSide: selection.side
+    });
+  });
+
   document.getElementById("helpBtn").addEventListener("click", () => openModal(helpModal));
   document.getElementById("confirmOk").addEventListener("click", () => settleConfirm(true));
   document.getElementById("confirmCancel").addEventListener("click", () => settleConfirm(false));
 
-  document.querySelectorAll(".modal [data-close]").forEach(el => {
-    el.addEventListener("click", () => {
-      const modal = el.closest(".modal");
+  document.querySelectorAll(".modal [data-close]").forEach(element => {
+    element.addEventListener("click", () => {
+      const modal = element.closest(".modal");
       if (modal === confirmModal) settleConfirm(false);
       else closeModal(modal);
     });
   });
 
-  document.addEventListener("keydown", e => {
-    if (e.key !== "Escape" || !activeModal) return;
-    if (activeModal === modeModal) return;   // la versión debe elegirse sí o sí
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || !activeModal) return;
+    if (activeModal === modeModal) return;
     if (activeModal === confirmModal) settleConfirm(false);
     else closeModal(activeModal);
   });
 
   document.addEventListener(LANGUAGE_CHANGE_EVENT, () => {
-    updateUI();
-    renderLog();
-    if (state.over) renderResult(countType("dwarf"), countType("troll"));
+    controller.refresh();
   });
 
-  document.addEventListener(GAME_STATE_EVENT, () => {
-    scheduleAiTurn();
-  });
-
-  /* ---------- BOTONES ---------- */
   document.getElementById("langBtn").addEventListener("click", () => {
-    switchLanguage(currentLang === "es" ? "en" : "es");
+    void switchLanguage(getLang() === "es" ? "en" : "es");
   });
 
   document.getElementById("endTurnBtn").addEventListener("click", () => {
-    if (state.over || animatingMove || isAiTurn()) return;
-    if (state.phase !== "capture" && state.phase !== "trample") return;
-    if (state.phase === "capture" && state.mustCapture && state.captured === 0) return;
-    endTurn();
+    if (activeModal) return;
+    controller.endTurn();
   });
 
   document.getElementById("finalizeBtn").addEventListener("click", async () => {
-    if (state.over || animatingMove || isAiTurn()) return;
+    if (activeModal || !controller.canHumanInteract()) return;
+
     const ok = await askConfirm(
       t("confirm.finalize.title"),
-      t(state.mode === "koom" ? "confirm.finalize.koom.text" : "confirm.finalize.text"),
+      t(store.game.mode === MODES.KOOM ? "confirm.finalize.koom.text" : "confirm.finalize.text"),
       t("btn.finalize")
     );
-    if (!ok || state.over) return;
-    if (state.mode === "koom"){
-      finishKoomBattle("draw");
-    } else {
-      finishBattle(countType("dwarf"), countType("troll"));
-    }
+    if (!ok || store.game.result) return;
+    controller.finalize();
   });
 
   document.getElementById("newBattleBtn").addEventListener("click", async () => {
-    if (animatingMove) return;
-    if (!state.over){
+    if (activeModal || controller.isBusy()) return;
+
+    if (!store.game.result) {
       const ok = await askConfirm(
         t("confirm.new.title"),
         t("confirm.new.text"),
@@ -114,23 +104,20 @@ export function bindEvents(){
       );
       if (!ok) return;
     }
-    openModeModal();
+
+    controller.cancel();
+    openModeModal({
+      mode: store.game.mode,
+      opponent: store.session.opponent,
+      side: store.session.humanSide || "dwarfs"
+    });
   });
 }
 
-/* ---------- ARRANQUE ---------- */
-export async function init(){
+export async function init() {
   buildGrid();
-  boardEl.addEventListener("click", e => {
-    const cell = e.target.closest ? e.target.closest(".cell") : null;
-    if (!cell) return;
-    onCellClick(Number(cell.dataset.r), Number(cell.dataset.c));
-  });
-  boardEl.addEventListener("pointerdown", onPointerDown);
-  window.addEventListener("pointermove", onPointerMove, { passive: false });
-  window.addEventListener("pointerup", onPointerUp);
-  window.addEventListener("pointercancel", onPointerCancel);
-  window.addEventListener("blur", cancelDrag);
+  bindInput(controller);
+
   try {
     await loadLocale(preferredLanguage());
   } catch (err) {
@@ -140,7 +127,12 @@ export async function init(){
       "Could not load translations. Check resources/i18n/.";
     return;
   }
+
   applyTranslations();
-  setupBoard("classic");
-  openModeModal();
+  controller.startGame({ mode: MODES.CLASSIC, opponent: "human" });
+  openModeModal({
+    mode: store.game.mode,
+    opponent: store.session.opponent,
+    side: store.session.humanSide || "dwarfs"
+  });
 }
