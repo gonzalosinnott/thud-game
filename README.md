@@ -82,6 +82,8 @@ trolls ganan si no queda ningún enano.
 ## Estilos
 
 - `resources/style/thud-style.css`: estilos del tablero, panel y modales.
+- `resources/assets/fonts/`: Grenze Gotisch y Alegreya (SIL OFL), incluidas para
+  que la interfaz conserve su tipografía también sin conexión.
 
 ## Generar archivos derivados
 

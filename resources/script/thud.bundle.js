@@ -1136,10 +1136,14 @@
 # Thud \u2014 Traducciones al castellano
 # ---------------------------------------------------------------
 app.title=Thud \u2014 Enanos y Trolls
+app.tagline=Un juego de enanos y trolls
 lang.switch=Cambiar idioma
 help.open=C\xF3mo se juega
 
 board.aria=Tablero de Thud
+board.caption=El campo de batalla
+panel.aria=Panel de la partida
+panel.colophon=Registro de Combate
 log.aria=Registro de la partida
 log.title=Registro
 
@@ -1231,7 +1235,7 @@ mode.start=Comenzar batalla
 mode.classic.name=Thud tradicional
 mode.classic.desc=32 enanos contra 8 trolls. Captura piezas y suma puntos por cada pieza no eliminada.
 mode.koom.name=Valle de Koom
-mode.koom.desc=Para ganar, los enanos deben llevar la roca al otro lado del valle, hasta cualquiera de las cinco casillas del lado opuesto del tablero, contra el que est\xE1 sentado el comandante enano. Para ganar, los trolls deben capturar la roca colocando tres trolls adyacentes a ella (en cualquier direcci\xF3n, incluidas las diagonales). Si ning\xFAn bando puede alcanzar su objetivo, la partida termina en empate.
+mode.koom.desc=Los enanos deben llevar la roca hasta la fila dorada del lado opuesto. Los trolls ganan si tres trolls quedan adyacentes a la roca. Si nadie alcanza su objetivo, la partida termina en empate.
 
 legend.dwarf.koom=Enano
 legend.troll.koom=Troll
@@ -1281,10 +1285,14 @@ help.koom.end=<b>Fin:</b> los enanos ganan si la roca llega a la fila dorada; lo
 # Thud \u2014 English translations
 # ---------------------------------------------------------------
 app.title=Thud \u2014 Dwarfs and Trolls
+app.tagline=A game of dwarfs and trolls
 lang.switch=Switch language
 help.open=How to play
 
 board.aria=Thud board
+board.caption=The field of battle
+panel.aria=Game panel
+panel.colophon=Battle Log
 log.aria=Battle log
 log.title=Battle log
 
@@ -1376,7 +1384,7 @@ mode.start=Start battle
 mode.classic.name=Classic Thud
 mode.classic.desc=32 dwarfs against 8 trolls. Capture pieces and score points for each surviving piece.
 mode.koom.name=Koom Valley
-mode.koom.desc=For the dwarfs to win they must move the rock to the far side of the valley - onto any of the five squares on the opposite side of the board against which the dwarf commander is sitting. For the trolls to win they must capture the rock by placing three trolls adjacent to it (in any direction including diagonally). If neither side can achieve their objective the game is drawn.
+mode.koom.desc=Dwarfs must carry the rock to the golden row on the far side. Trolls win if three trolls end up adjacent to the rock. If neither side reaches its objective, the battle is a draw.
 
 legend.dwarf.koom=Dwarf
 legend.troll.koom=Troll
@@ -1498,9 +1506,11 @@ help.koom.end=<b>End:</b> dwarfs win if the rock reaches the golden row; trolls 
     });
     const langBtn = document.getElementById("langBtn");
     if (langBtn) {
-      langBtn.textContent = getLang().toUpperCase();
-      langBtn.setAttribute("aria-label", t("lang.switch"));
-      langBtn.setAttribute("title", t("lang.switch"));
+      const code = getLang().toUpperCase();
+      const label = `${t("lang.switch")} (${code})`;
+      langBtn.textContent = code;
+      langBtn.setAttribute("aria-label", label);
+      langBtn.setAttribute("title", label);
     }
   }
 
@@ -2238,6 +2248,7 @@ help.koom.end=<b>End:</b> dwarfs win if the rock reaches the golden row; trolls 
     activeModal = modal;
     modal.hidden = false;
     document.body.classList.add("modal-open");
+    setBackgroundInert(true);
     const focusable = modal.querySelector(".mode-option, .modal-close, .modal-actions .btn");
     if (focusable) focusable.focus();
   }
@@ -2246,9 +2257,32 @@ help.koom.end=<b>End:</b> dwarfs win if the rock reaches the golden row; trolls 
     modal.hidden = true;
     activeModal = null;
     document.body.classList.remove("modal-open");
+    setBackgroundInert(false);
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
     lastFocused = null;
   }
+  function setBackgroundInert(value) {
+    for (const selector of [".head", ".layout"]) {
+      const element = document.querySelector(selector);
+      if (element) element.inert = value;
+    }
+  }
+  var FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab" || !activeModal) return;
+    const focusable = Array.from(activeModal.querySelectorAll(FOCUSABLE)).filter((element) => element.getClientRects().length > 0);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const current2 = document.activeElement;
+    if (event.shiftKey && (current2 === first || !activeModal.contains(current2))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (current2 === last || !activeModal.contains(current2))) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
   function openModeModal(initial = {}) {
     selection = {
       mode: initial.mode === MODES.KOOM ? MODES.KOOM : MODES.CLASSIC,

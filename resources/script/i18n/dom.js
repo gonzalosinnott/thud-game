@@ -21,8 +21,10 @@ export function applyTranslations() {
 
   const langBtn = document.getElementById("langBtn");
   if (langBtn) {
-    langBtn.textContent = getLang().toUpperCase();
-    langBtn.setAttribute("aria-label", t("lang.switch"));
-    langBtn.setAttribute("title", t("lang.switch"));
+    const code = getLang().toUpperCase();
+    const label = `${t("lang.switch")} (${code})`;
+    langBtn.textContent = code;
+    langBtn.setAttribute("aria-label", label);
+    langBtn.setAttribute("title", label);
   }
 }

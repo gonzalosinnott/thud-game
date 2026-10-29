@@ -21,6 +21,7 @@ export function openModal(modal) {
   activeModal = modal;
   modal.hidden = false;
   document.body.classList.add("modal-open");
+  setBackgroundInert(true);
   const focusable = modal.querySelector(".mode-option, .modal-close, .modal-actions .btn");
   if (focusable) focusable.focus();
 }
@@ -30,9 +31,41 @@ export function closeModal(modal) {
   modal.hidden = true;
   activeModal = null;
   document.body.classList.remove("modal-open");
+  setBackgroundInert(false);
   if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
   lastFocused = null;
 }
+
+function setBackgroundInert(value) {
+  for (const selector of [".head", ".layout"]) {
+    const element = document.querySelector(selector);
+    if (element) element.inert = value;
+  }
+}
+
+// Mantiene el foco dentro del diálogo abierto.
+const FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]), " +
+  "select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
+document.addEventListener("keydown", event => {
+  if (event.key !== "Tab" || !activeModal) return;
+
+  const focusable = Array.from(activeModal.querySelectorAll(FOCUSABLE))
+    .filter(element => element.getClientRects().length > 0);
+  if (!focusable.length) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const current = document.activeElement;
+
+  if (event.shiftKey && (current === first || !activeModal.contains(current))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (current === last || !activeModal.contains(current))) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 
 export function openModeModal(initial = {}) {
   selection = {

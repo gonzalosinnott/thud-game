@@ -3,13 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#efe6d3">
+<meta name="description" content="Thud, el juego de enanos y trolls de Terry Pratchett. Juega al Thud tradicional o al Valle de Koom contra otra persona o la máquina.">
 <title>Thud — Enanos y Trolls</title>
 <link rel="stylesheet" href="resources/style/thud-style.css">
 </head>
 <body>
+<div class="atmosphere" aria-hidden="true">
+  <span class="rune-ring rune-ring-outer"></span>
+  <span class="rune-ring rune-ring-inner"></span>
+</div>
+
 <header class="head">
-  <h1>THUD</h1>
-  <p class="subtitle">By Terry Pratchett</p>
+  <div class="masthead">
+    <p class="eyebrow" data-i18n="app.tagline">Un juego de enanos y trolls</p>
+    <h1 class="wordmark">
+      <span class="wordmark-rule" aria-hidden="true"></span>
+      <span class="wordmark-text">Thud</span>
+      <span class="wordmark-rule" aria-hidden="true"></span>
+    </h1>
+  </div>
   <div class="head-actions">
     <button type="button" id="langBtn" class="lang-btn" aria-label="Cambiar idioma" title="Cambiar idioma">ES</button>
     <button type="button" id="helpBtn" class="help-btn" data-i18n-aria="help.open" data-i18n-title="help.open" aria-label="Cómo se juega" title="Cómo se juega">?</button>
@@ -18,21 +31,33 @@
 
 <main class="layout">
   <section class="board-wrap">
-    <div class="board" id="board" aria-label="Tablero de Thud" data-i18n-aria="board.aria"></div>
+    <div class="board-frame">
+      <div class="board" id="board" role="group" aria-label="Tablero de Thud" data-i18n-aria="board.aria"></div>
+      <span class="stud stud-tl" aria-hidden="true"></span>
+      <span class="stud stud-tr" aria-hidden="true"></span>
+      <span class="stud stud-bl" aria-hidden="true"></span>
+      <span class="stud stud-br" aria-hidden="true"></span>
+      <span class="board-emblem board-emblem-tl" aria-hidden="true"></span>
+      <span class="board-emblem board-emblem-tr" aria-hidden="true"></span>
+      <span class="board-emblem board-emblem-bl" aria-hidden="true"></span>
+      <span class="board-emblem board-emblem-br" aria-hidden="true"></span>
+    </div>
+    <p class="board-caption" aria-hidden="true">
+      <span class="caption-mark"></span>
+      <span data-i18n="board.caption">El campo de batalla</span>
+      <span class="caption-mark"></span>
+    </p>
   </section>
 
-  <aside class="panel">
-    <div class="mode-badge" id="modeBadge"></div>
-    <div class="matchup-badge" id="matchupBadge" hidden></div>
-
-    <div class="actions">
-      <button id="finalizeBtn" class="btn finalize" data-i18n="btn.finalize">Finalizar batalla</button>
-      <button id="newBattleBtn" class="btn new-battle" data-i18n="btn.newBattle">Nueva batalla</button>
+  <aside class="panel" aria-label="Panel de la partida" data-i18n-aria="panel.aria">
+    <div class="panel-badges">
+      <div class="mode-badge" id="modeBadge"></div>
+      <div class="matchup-badge" id="matchupBadge" hidden></div>
     </div>
 
     <div class="turn dwarfs" id="turn">
       <span id="turnLabel">Turno de los Enanos</span>
-      <button id="endTurnBtn" class="btn end-turn" data-i18n="btn.endTurn" hidden>Terminar turno</button>
+      <button id="endTurnBtn" class="btn end-turn" type="button" data-i18n="btn.endTurn" hidden>Terminar turno</button>
     </div>
 
     <div class="scores">
@@ -48,8 +73,13 @@
       </div>
     </div>
 
-    <div class="status" id="status" data-i18n="status.selectDwarf">Selecciona un enano para mover o lanzar.</div>
+    <div class="status" id="status" role="status" aria-live="polite" data-i18n="status.selectDwarf">Selecciona un enano para mover o lanzar.</div>
     <div class="result" id="result" hidden></div>
+
+    <div class="actions">
+      <button id="finalizeBtn" class="btn finalize" type="button" data-i18n="btn.finalize">Finalizar batalla</button>
+      <button id="newBattleBtn" class="btn new-battle" type="button" data-i18n="btn.newBattle">Nueva batalla</button>
+    </div>
 
     <div class="legend">
       <div><span class="dot dwarf-dot"></span> <span id="legendDwarf" data-i18n="legend.dwarf">Enano · 1 pt</span></div>
@@ -60,7 +90,14 @@
     <section class="log-wrap log-section" aria-label="Registro de la partida" data-i18n-aria="log.aria">
       <h2 data-i18n="log.title">Registro</h2>
       <ol id="log"></ol>
+      <div class="log-fill" aria-hidden="true"></div>
     </section>
+
+    <p class="panel-colophon" aria-hidden="true">
+      <span class="colophon-rule"></span>
+      <span class="colophon-text" data-i18n="panel.colophon">Registro de Combate</span>
+      <span class="colophon-rule"></span>
+    </p>
   </aside>
 </main>
 
@@ -69,6 +106,7 @@
   <div class="modal-backdrop"></div>
   <div class="modal-card mode-card">
     <h2 id="modeTitle" data-i18n="mode.title">Elige un modo de juego</h2>
+    <span class="mode-stamp" aria-hidden="true"></span>
 
     <section class="mode-section">
       <h3 class="mode-section-title" data-i18n="mode.version">Versión</h3>
@@ -76,10 +114,19 @@
         <button type="button" class="mode-option" id="modeClassic" aria-pressed="false">
           <span class="mode-name" data-i18n="mode.classic.name">Thud tradicional</span>
           <span class="mode-desc" data-i18n="mode.classic.desc">32 enanos contra 8 trolls. Captura piezas y suma puntos por cada pieza no eliminada.</span>
+          <span class="mode-force" aria-hidden="true">
+            <span class="force-side"><span class="force-token dwarf"></span><span class="force-count">32</span></span>
+            <span class="force-sep"></span>
+            <span class="force-side"><span class="force-count">8</span><span class="force-token troll"></span></span>
+          </span>
         </button>
         <button type="button" class="mode-option" id="modeKoom" aria-pressed="false">
           <span class="mode-name" data-i18n="mode.koom.name">Valle de Koom</span>
           <span class="mode-desc" data-i18n="mode.koom.desc">Para ganar, los enanos deben llevar la roca al otro lado del valle, hasta cualquiera de las cinco casillas del lado opuesto del tablero, contra el que está sentado el comandante enano. Para ganar, los trolls deben capturar la roca colocando tres trolls adyacentes a ella (en cualquier dirección, incluidas las diagonales). Si ningún bando puede alcanzar su objetivo, la partida termina en empate.</span>
+          <span class="mode-force" aria-hidden="true">
+            <span class="force-token rock"></span>
+            <span class="force-goals"><i></i><i></i><i></i><i></i><i></i></span>
+          </span>
         </button>
       </div>
     </section>
@@ -109,7 +156,7 @@
 <!-- Modal: Cómo se juega -->
 <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
   <div class="modal-backdrop" data-close></div>
-  <div class="modal-card">
+  <div class="modal-card help-card">
     <button type="button" class="modal-close" data-close data-i18n-aria="modal.close" aria-label="Cerrar">&times;</button>
     <h2 id="helpTitle" data-i18n="help.title">Cómo se juega</h2>
     <div class="modal-body">
